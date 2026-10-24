@@ -1,0 +1,82 @@
+{
+  "layers": 2,
+  "shapes": {
+    "layer0_q": [
+      64,
+      64
+    ],
+    "layer0_k": [
+      64,
+      64
+    ],
+    "layer0_v": [
+      64,
+      64
+    ],
+    "layer0_o": [
+      64,
+      64
+    ],
+    "layer1_q": [
+      64,
+      64
+    ],
+    "layer1_k": [
+      64,
+      64
+    ],
+    "layer1_v": [
+      64,
+      64
+    ],
+    "layer1_o": [
+      64,
+      64
+    ],
+    "layer0_w1": [
+      64,
+      64
+    ],
+    "layer0_w2": [
+      64,
+      64
+    ],
+    "layer1_w1": [
+      64,
+      64
+    ],
+    "layer1_w2": [
+      64,
+      64
+    ],
+    "output": [
+      64,
+      16
+    ]
+  },
+  "task": "reconstruct the clean shifted pattern from a noisy 16x16 grid",
+  "threshold": 128,
+  "hidden": 64,
+  "train": {
+    "steps": 3000,
+    "qat_steps": 1500,
+    "batch": 64,
+    "seed": 0
+  },
+  "integer_path_metrics": {
+    "test": {
+      "samples": 240,
+      "pixel_accuracy": 0.9999837239583333,
+      "exact_grids": 0.9958333333333333,
+      "class_accuracy": 1.0,
+      "input_pixel_accuracy": 0.9944661458333334
+    },
+    "hard": {
+      "samples": 200,
+      "pixel_accuracy": 0.99857421875,
+      "exact_grids": 0.835,
+      "class_accuracy": 1.0,
+      "input_pixel_accuracy": 0.9552734375
+    }
+  }
+}
