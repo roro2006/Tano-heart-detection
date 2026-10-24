@@ -30,9 +30,13 @@ module tang_nano_20k_top (
     assign rst = !por_done || btn_sync[1];
 
     logic busy, computing, rx_activity, error_seen;
+    // The board boots with the heart-sound screening model (python/train_heart.py).
     tpu_top #(
         .CLKS_PER_BIT((CLK_HZ + BAUD / 2) / BAUD),
-        .TIMEOUT_CLKS(CLK_HZ / 10)
+        .TIMEOUT_CLKS(CLK_HZ / 10),
+        .WEIGHTS_FILE("weights/heart/tpu_weights.mem"),
+        .LSH_FILE("weights/heart/tpu_lsh.mem"),
+        .POSITION_FILE("weights/heart/tpu_position.mem")
     ) accel (
         .clk(clk27), .rst(rst), .uart_rx_pin(uart_rx), .uart_tx_pin(uart_tx),
         .busy(busy), .computing(computing), .rx_activity(rx_activity),

@@ -18,8 +18,9 @@ import tpu_model
 from q8_attention import attention_q8_8, pack_frame, unpack_frame
 from tpu_model import Int8Matrix, TpuModel
 
-OP_ECHO, OP_LOAD, OP_ATTN, OP_INFO, OP_INFER, OP_LOADPOS, OP_ERROR = (
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xEE)
+OP_ECHO, OP_LOAD, OP_ATTN, OP_INFO, OP_INFER, OP_LOADPOS, OP_AUDIO, OP_ERROR = (
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xEE)
+AUDIO_CHUNK = 1024
 MATRIX_NAMES = ("q", "k", "v", "o")
 TOKENS, WIDTH, FEATURES, OUTPUTS = 16, 64, 16, 16
 # Must match BAUD in rtl/tang_nano_20k_top.sv.
@@ -88,6 +89,30 @@ def position_request(position: Sequence[Sequence[int]]) -> bytes:
 
 def response(op: int, status: int = 0, data: bytes = b"") -> bytes:
     return pack_frame(bytes([op, status]) + data)
+
+
+def audio_request(samples: Sequence[int], reset: bool) -> bytes:
+    if len(samples) > AUDIO_CHUNK:
+        raise ValueError(f"at most {AUDIO_CHUNK} samples per AUDIO request")
+    return request(OP_AUDIO, int(reset), struct.pack("<" + "h" * len(samples), *samples))
+
+
+def audio_response(windows: int, margin: int, last_class: int) -> bytes:
+    return response(OP_AUDIO, 0, struct.pack("<HiB", windows, margin, last_class))
+
+
+def audio_totals(model: TpuModel, samples: Sequence[int]) -> tuple[int, int, int]:
+    """What the FPGA reports after streaming `samples` from a reset: the number
+    of completed windows, the sum of (pooled[1] - pooled[0]) and the last class."""
+    import heart_features
+    windows = heart_features.recording_windows(samples)
+    margin, last = 0, 0
+    for features in windows:
+        logits = tpu_model.forward(model, features)
+        pooled = [sum(row[j] for row in logits) for j in range(OUTPUTS)]
+        margin += pooled[1] - pooled[0]
+        last = tpu_model.predicted_class(logits)
+    return len(windows), margin, last
 
 
 def infer_response(logits: Sequence[Sequence[int]], cycles: int) -> bytes:
@@ -165,6 +190,18 @@ class TpuLink:
         data = self._checked(attention_request(layer, x), OP_ATTN)
         return decode_q8_matrix(data, TOKENS, WIDTH)
 
+    def audio(self, samples: Sequence[int], reset: bool = False) -> tuple[int, int, int]:
+        """Stream up to 1024 samples: (windows, margin sum, last class) since the last reset."""
+        data = self._checked(audio_request(samples, reset), OP_AUDIO)
+        return struct.unpack("<HiB", data)
+
+    def stream(self, samples: Sequence[int]) -> tuple[int, int, int]:
+        """Send a whole recording from a stream reset; abnormal when the margin is positive."""
+        result = self.audio([], reset=True)
+        for start in range(0, len(samples), AUDIO_CHUNK):
+            result = self.audio(samples[start:start + AUDIO_CHUNK])
+        return result
+
     def infer(self, features: Sequence[Sequence[int]]) -> tuple[int, int, list[list[int]]]:
         """Run the whole model on the FPGA: (class, compute cycles, 16x16 logits)."""
         data = self._checked(infer_request(features), OP_INFER)
@@ -207,14 +244,14 @@ def selftest(tpu: TpuLink, seed: int, runs: int) -> bool:
     print("echo: ok (256 bytes)")
     ok = True
 
-    baked_dir = ROOT / "weights"
+    # The board bakes the heart model (rtl/tang_nano_20k_top.sv).
+    baked_dir = ROOT / "weights" / "heart"
     if (baked_dir / tpu_model.MANIFEST).exists():
         # Must run before any LOAD: checks the model built into the bitstream.
-        import dataset
         baked = tpu_model.load(baked_dir)
         same = 0
-        for record in dataset.hard_set(8, seed=seed):
-            features = tpu_model.grid_features(record["pixels"])
+        for _ in range(8):
+            features = random_matrix(rng, TOKENS, FEATURES, 600)
             got_class, cycles, logits = tpu.infer(features)
             expected = tpu_model.forward(baked, features)
             same += logits == expected and got_class == tpu_model.predicted_class(expected)

@@ -9,8 +9,14 @@
 //   04 INFO                                -> 04 00 'T' 'P' 'U' version cycles[4]
 //   05 INFER  0, 16x16 int16 LE features   -> 05 00 class cycles[4] + 16x16 int16 LE logits
 //   06 LOADPOS 0, 16x64 int16 LE position  -> 06 00
+//   07 AUDIO  bit0: reset stream, then int16 LE samples at 2 kHz (<= 1024)
+//                                          -> 07 00 windows[2] margin[4] class
 //   bad checksum                           -> EE 01
 // cycles is the core's compute time for the last ATTN/INFER, in clocks.
+// AUDIO feeds samples through audio_frontend; every completed 2.048 s window
+// runs the full model, and the response carries the totals since the last
+// stream reset: windows, the sum of (pooled[1] - pooled[0]) and the last
+// window's class (heart_features.recording_windows + tpu_model.forward).
 // Weights, shifts and the position table start from the baked files, so the
 // board runs the model from power-up; LOAD/LOADPOS replace them until reset.
 // LOAD writes as bytes arrive, so a LOAD answered with EE must be resent.
@@ -33,10 +39,11 @@ module tpu_top #(
 );
     localparam integer MAX_PAYLOAD = 4099;
     localparam logic [7:0] OP_ECHO = 8'h01, OP_LOAD = 8'h02, OP_ATTN = 8'h03, OP_INFO = 8'h04,
-                           OP_INFER = 8'h05, OP_LOADPOS = 8'h06, OP_ERROR = 8'hEE;
-    localparam logic [7:0] VERSION = 8'h02;
+                           OP_INFER = 8'h05, OP_LOADPOS = 8'h06, OP_AUDIO = 8'h07,
+                           OP_ERROR = 8'hEE;
+    localparam logic [7:0] VERSION = 8'h03;
     localparam logic [2:0] SRC_NONE = 3'd0, SRC_RX = 3'd1, SRC_O = 3'd2, SRC_INFO = 3'd3,
-                           SRC_INFER = 3'd4;
+                           SRC_INFER = 3'd4, SRC_AUDIO = 3'd5;
     localparam logic [1:0] DST_X = 2'd0, DST_F = 2'd1, DST_POS = 2'd2;
 
     // UART and framing.
@@ -105,6 +112,7 @@ module tpu_top #(
     // Model core.
     logic core_start, core_prog, core_busy, core_done, layer;
     logic [3:0] core_class;
+    logic signed [19:0] core_pooled0, core_pooled1;
     logic [31:0] core_cycles;
     logic core_a_we;
     logic [8:0] core_a_raddr, core_a_waddr;
@@ -112,15 +120,32 @@ module tpu_top #(
     tpu_core core(
         .clk(clk), .rst(rst), .start(core_start), .prog(core_prog), .layer(layer),
         .busy(core_busy), .done(core_done), .class_out(core_class), .cycles(core_cycles),
+        .pooled0(core_pooled0), .pooled1(core_pooled1),
         .a_raddr(core_a_raddr), .a_rdata(a_rdata), .a_we(core_a_we),
         .a_waddr(core_a_waddr), .a_wdata(core_a_wdata),
         .w_raddr(w_raddr), .w_rdata(w_rdata), .w_slot(w_slot), .w_lsh(lsh_mem[w_slot][2:0]),
         .pos_raddr(pos_raddr), .pos_rdata(pos_rdata));
 
-    typedef enum logic [1:0] {T_IDLE, T_REPACK, T_RUN, T_RESP} top_state_t;
+    typedef enum logic [2:0] {T_IDLE, T_REPACK, T_RUN, T_RESP, T_AUDIO} top_state_t;
+    typedef enum logic [2:0] {AU_NEXT, AU_LO, AU_HI, AU_CAP, AU_WAIT} audio_state_t;
     typedef enum logic [1:0] {R_FETCH, R_SEND, R_WAIT} resp_state_t;
     top_state_t state;
     resp_state_t rstate;
+    audio_state_t astate;
+
+    // Audio streaming: samples from the rx buffer into the front end.
+    logic fe_reset, fe_valid, fe_ready, fe_window, fe_resume, fe_a_we;
+    logic [8:0] fe_a_waddr;
+    logic [143:0] fe_a_wdata;
+    logic signed [15:0] au_sample;
+    logic [10:0] au_count, au_i;
+    logic [15:0] audio_windows;
+    logic signed [31:0] audio_margin;
+    logic [3:0] audio_class;
+    audio_frontend frontend(
+        .clk(clk), .rst(rst), .stream_reset(fe_reset), .sample(au_sample),
+        .sample_valid(fe_valid), .sample_ready(fe_ready), .window_ready(fe_window),
+        .resume(fe_resume), .a_we(fe_a_we), .a_waddr(fe_a_waddr), .a_wdata(fe_a_wdata));
 
     // Request capture.
     logic [12:0] byte_idx;
@@ -160,6 +185,11 @@ module tpu_top #(
     assign resp_payload_len = {1'd0, resp_data_len} + 13'd2;
     assign resp_i = 12'(pos - 13'd6);
     assign logit_i = 9'(resp_i - 12'd5);
+    // Byte indices into multi-byte fields, kept 2 bits wide: written inline as
+    // (resp_i[1:0] - 2'd1) * 8 the subtraction widens to 32 bits and goes negative.
+    logic [1:0] cycle_byte, margin_byte;
+    assign cycle_byte = resp_i[1:0] - 2'd1;
+    assign margin_byte = resp_i[1:0] - 2'd2;
 
     always_comb begin
         if (pos == 0) resp_byte = 8'hA5;
@@ -179,14 +209,20 @@ module tpu_top #(
                     3'd1: resp_byte = 8'h50;
                     3'd2: resp_byte = 8'h55;
                     3'd3: resp_byte = VERSION;
-                    default: resp_byte = last_cycles[(resp_i[1:0] - 2'd0) * 8 +: 8];
+                    default: resp_byte = last_cycles[resp_i[1:0]*8 +: 8];
                 endcase
                 // Class, cycles, then logit (t, j) at byte 5 + (t*16 + j)*2 + hi.
                 SRC_INFER: begin
                     if (resp_i == 0) resp_byte = {4'd0, last_class};
-                    else if (resp_i < 5) resp_byte = last_cycles[(resp_i[1:0] - 2'd1) * 8 +: 8];
+                    else if (resp_i < 5) resp_byte = last_cycles[cycle_byte*8 +: 8];
                     else resp_byte = logit_i[0] ? a_rdata[logit_i[7:5]*18 + 8 +: 8]
                                                 : a_rdata[logit_i[7:5]*18 +: 8];
+                end
+                // Windows (u16), margin sum (i32), last class.
+                SRC_AUDIO: begin
+                    if (resp_i < 2) resp_byte = audio_windows[resp_i[0]*8 +: 8];
+                    else if (resp_i < 6) resp_byte = audio_margin[margin_byte*8 +: 8];
+                    else resp_byte = {4'd0, audio_class};
                 end
                 default: resp_byte = 8'h00;
             endcase
@@ -229,6 +265,9 @@ module tpu_top #(
         if (state == T_REPACK)
             rx_raddr = rp_k16 ? {2'd0, rp[8], rp[3:1], rp[7:4], rp[0]}
                               : {rp[10], rp[3:1], rp[9:4], rp[0]};
+        else if (state == T_AUDIO)
+            // Low byte of sample au_i in AU_LO, high byte in AU_HI.
+            rx_raddr = {au_i[9:0], astate == AU_HI};
         else
             rx_raddr = resp_i[10:0];
         if (state == T_RUN) begin
@@ -236,6 +275,11 @@ module tpu_top #(
             a_we = core_a_we;
             a_waddr = core_a_waddr;
             a_wdata = core_a_wdata;
+        end else if (state == T_AUDIO) begin
+            a_raddr = '0;
+            a_we = fe_a_we;
+            a_waddr = fe_a_waddr;
+            a_wdata = fe_a_wdata;
         end else begin
             // O row r lives in word (r[3], c) of X; logit (t, j) in word 384 + t[3]*16 + j.
             a_raddr = (resp_src == SRC_INFER) ? 9'd384 + {4'd0, logit_i[8], logit_i[4:1]}
@@ -255,6 +299,9 @@ module tpu_top #(
         rx_we <= 1'b0;
         tx_start <= 1'b0;
         core_start <= 1'b0;
+        fe_reset <= 1'b0;
+        fe_valid <= 1'b0;
+        fe_resume <= 1'b0;
         rx_activity <= rx_valid;
         if (rst) begin
             state <= T_IDLE;
@@ -272,6 +319,10 @@ module tpu_top #(
             error_seen <= 1'b0;
             last_cycles <= '0;
             last_class <= '0;
+            astate <= AU_NEXT;
+            audio_windows <= '0;
+            audio_margin <= '0;
+            audio_class <= '0;
         end else begin
             if (packet_start)
                 byte_idx <= '0;
@@ -349,6 +400,19 @@ module tpu_top #(
                                 resp_src <= SRC_INFO;
                                 resp_data_len <= 12'd8;
                             end
+                            OP_AUDIO: if (payload_length >= 13'd2 && payload_length <= 13'd2050 &&
+                                          !payload_length[0]) begin
+                                if (arg[0]) begin
+                                    fe_reset <= 1'b1;
+                                    audio_windows <= '0;
+                                    audio_margin <= '0;
+                                    audio_class <= '0;
+                                end
+                                au_count <= 11'((payload_length - 13'd2) >> 1);
+                                au_i <= '0;
+                                astate <= AU_NEXT;
+                                state <= T_AUDIO;
+                            end else resp_status <= 8'h01;
                             default: resp_status <= 8'h02;
                         endcase
                     end
@@ -371,9 +435,50 @@ module tpu_top #(
                 T_RUN: if (core_done) begin
                     last_cycles <= core_cycles;
                     last_class <= core_class;
-                    resp_src <= core_prog ? SRC_INFER : SRC_O;
-                    resp_data_len <= core_prog ? 12'd517 : 12'd2048;
-                    state <= T_RESP;
+                    if (opcode == OP_AUDIO) begin
+                        // One window of the stream: accumulate and keep feeding.
+                        audio_windows <= audio_windows + 1'b1;
+                        audio_margin <= audio_margin + 32'(core_pooled1) - 32'(core_pooled0);
+                        audio_class <= core_class;
+                        fe_resume <= 1'b1;
+                        state <= T_AUDIO;
+                    end else begin
+                        resp_src <= core_prog ? SRC_INFER : SRC_O;
+                        resp_data_len <= core_prog ? 12'd517 : 12'd2048;
+                        state <= T_RESP;
+                    end
+                end
+                T_AUDIO: begin
+                    // A finished window runs the model before more samples go in.
+                    // Only leave from AU_NEXT/AU_WAIT, where no rx read is in flight.
+                    // fe_resume is still high on the first cycle back here, while the
+                    // front end has not yet left WAIT: ignore that stale window_ready.
+                    if (fe_window && !fe_resume && (astate == AU_NEXT || astate == AU_WAIT)) begin
+                        core_prog <= 1'b1;
+                        core_start <= 1'b1;
+                        state <= T_RUN;
+                    end else case (astate)
+                        AU_NEXT: if (au_i != au_count) astate <= AU_LO;
+                                 else if (fe_ready && !fe_valid) begin
+                                     resp_src <= SRC_AUDIO;
+                                     resp_data_len <= 12'd7;
+                                     state <= T_RESP;
+                                 end
+                        AU_LO: astate <= AU_HI;                    // low byte address up
+                        AU_HI: begin                               // low byte in, high address up
+                            au_sample[7:0] <= rx_rdata;
+                            astate <= AU_CAP;
+                        end
+                        AU_CAP: begin                              // high byte in
+                            au_sample[15:8] <= rx_rdata;
+                            astate <= AU_WAIT;
+                        end
+                        default: if (fe_ready && !fe_valid) begin  // AU_WAIT: hand over
+                            fe_valid <= 1'b1;
+                            au_i <= au_i + 1'b1;
+                            astate <= AU_NEXT;
+                        end
+                    endcase
                 end
                 T_RESP: case (rstate)
                     // Addresses derive from pos; give the BSRAM one cycle.

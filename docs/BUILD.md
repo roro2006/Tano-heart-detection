@@ -90,9 +90,10 @@ Frames are `A5 5A len_lo len_hi payload xor`. Request payloads are
 | `01` ECHO | any | ≤ 2048 bytes | `01 00` + data |
 | `02` LOAD | slot: layer·6 + (q,k,v,o,w1,w2); 12 embed; 13 output | lsh, then int8 W[k][c] row-major (64×64, 16×64, 64×16) | `02 00` |
 | `03` ATTN | layer | 16×64 int16 LE X | `03 00` + 16×64 int16 LE attention output |
-| `04` INFO | — | — | `04 00 'TPU' 02` + cycles (u32 LE) |
+| `04` INFO | — | — | `04 00 'TPU' 03` + cycles (u32 LE) |
 | `05` INFER | 0 | 16×16 int16 LE features | `05 00` class, cycles (u32 LE), 16×16 int16 LE logits |
 | `06` LOADPOS | 0 | 16×64 int16 LE position table | `06 00` |
+| `07` AUDIO | bit 0: reset the stream first | ≤ 1024 int16 LE samples at 2 kHz | `07 00` windows (u16), margin sum (i32), last class |
 | bad checksum | | | `EE 01` |
 
 LOAD writes weights while bytes arrive. If it is answered with `EE`, resend it.

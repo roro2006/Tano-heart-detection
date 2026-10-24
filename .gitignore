@@ -6,3 +6,4 @@ sim/attention_vector.json
 data/
 sim/ln_input.mem
 sim/ln_expected.mem
+sim/audio_vectors.mem

@@ -56,6 +56,24 @@ class FrontEndTests(unittest.TestCase):
         self.assertTrue(all(len(w) == 16 and all(len(r) == 16 for r in w) for w in windows))
 
 
+class AudioProtocolTests(unittest.TestCase):
+    def test_audio_request_layout(self):
+        from host import OP_AUDIO, audio_request
+        from q8_attention import unpack_frame
+        payload = unpack_frame(audio_request([1, -2, 300], reset=True))
+        self.assertEqual(payload, bytes([OP_AUDIO, 1]) + b"\x01\x00\xfe\xff\x2c\x01")
+        with self.assertRaises(ValueError):
+            audio_request([0] * 1025, reset=False)
+
+    def test_windows_complete_on_frame_boundaries(self):
+        from host import audio_totals, random_model
+        model = random_model(random.Random(4))
+        # The first window ends with frame 17, i.e. after 18 * 256 samples.
+        self.assertEqual(audio_totals(model, tone(80.0, n=18 * hf.FRAME - 1))[0], 0)
+        self.assertEqual(audio_totals(model, tone(80.0, n=18 * hf.FRAME))[0], 1)
+        self.assertEqual(audio_totals(model, tone(80.0, n=26 * hf.FRAME))[0], 2)
+
+
 class SplitTests(unittest.TestCase):
     def test_split_is_stratified_and_disjoint(self):
         items = [heart_dataset.Recording(f"{db}{i:04d}", db, int(i % 4 == 0), Path("x"))

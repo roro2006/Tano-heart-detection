@@ -30,6 +30,8 @@ module tpu_core #(
     output logic busy,
     output logic done,
     output logic [3:0] class_out,
+    output logic signed [19:0] pooled0,
+    output logic signed [19:0] pooled1,
     output logic [31:0] cycles,
     output logic [8:0] a_raddr,
     input  logic [143:0] a_rdata,
@@ -383,6 +385,9 @@ module tpu_core #(
                 state <= AM_USE;
             end
             AM_USE: begin
+                // Token-summed logits of classes 0 and 1, for the audio margin.
+                if (am_j == 4'd0) pooled0 <= am_half + 20'(lane_sum);
+                if (am_j == 4'd1) pooled1 <= am_half + 20'(lane_sum);
                 if (am_j == 0 || am_half + 20'(lane_sum) > am_best) begin
                     am_best <= am_half + 20'(lane_sum);
                     class_out <= am_j;

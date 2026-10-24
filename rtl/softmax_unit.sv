@@ -23,9 +23,9 @@ module softmax_unit #(
     output logic [8:0] waddr,
     output logic [8*LW-1:0] wdata
 );
-    typedef enum logic [3:0] {
-        IDLE, MAX_RD, MAX_USE, SUM_RD, SUM_USE, SUM_LANE,
-        DIV_RD, DIV_USE, DIV_LANE, DIV_RUN, DIV_WRITE, DIV_DRAIN,
+    typedef enum logic [4:0] {
+        IDLE, MAX_RD, MAX_USE, SUM_RD, SUM_USE, SUM_LUT, SUM_LANE,
+        DIV_RD, DIV_USE, DIV_LUT, DIV_LANE, DIV_RUN, DIV_WRITE, DIV_DRAIN,
         FIX_RD, FIX_USE, FIX_WAIT
     } state_t;
 
@@ -55,6 +55,9 @@ module softmax_unit #(
     assign diff = 17'($signed({row_max[l][15], row_max[l]}) - $signed({lane_score[15], lane_score}));
     assign exp_index = (diff[16:4] > 13'd255) ? 8'd255 : diff[11:4];
     exp_rom rom(.index(exp_index), .value(exp_value));
+    // Registered so the table maps to a BSRAM; the *_LUT states wait for it.
+    logic [16:0] exp_q;
+    always_ff @(posedge clk) exp_q <= exp_value;
 
     assign div_trial = {div_rem[20:0], div_num[32]};
 
@@ -99,24 +102,26 @@ module softmax_unit #(
             SUM_USE: begin
                 word <= rdata;
                 l <= '0;
-                state <= SUM_LANE;
+                state <= SUM_LUT;
             end
+            SUM_LUT: state <= SUM_LANE;
             SUM_LANE: begin
-                row_total[l] <= row_total[l] + {4'd0, exp_value};
+                row_total[l] <= row_total[l] + {4'd0, exp_q};
                 l <= l + 1'b1;
                 if (l == 3'd7) begin
                     j <= j + 1'b1;
                     state <= state_t'((j == 4'd15) ? DIV_RD : SUM_RD);
-                end
+                end else state <= SUM_LUT;
             end
             DIV_RD: state <= DIV_USE;
             DIV_USE: begin
                 word <= rdata;
                 l <= '0;
-                state <= DIV_LANE;
+                state <= DIV_LUT;
             end
+            DIV_LUT: state <= DIV_LANE;
             DIV_LANE: begin
-                div_num <= {exp_value, 16'd0};
+                div_num <= {exp_q, 16'd0};
                 div_quo <= '0;
                 div_rem <= '0;
                 div_count <= 6'd33;
@@ -127,7 +132,7 @@ module softmax_unit #(
                     wdata[l*LW +: LW] <= LW'(div_quo);
                     row_psum[l] <= row_psum[l] + div_quo[20:0];
                     l <= l + 1'b1;
-                    state <= state_t'((l == 3'd7) ? DIV_WRITE : DIV_LANE);
+                    state <= state_t'((l == 3'd7) ? DIV_WRITE : DIV_LUT);
                 end else begin
                     if (div_trial >= {1'b0, row_total[l]}) begin
                         div_rem <= div_trial - {1'b0, row_total[l]};

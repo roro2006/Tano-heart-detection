@@ -1,11 +1,18 @@
 `timescale 1ns/1ps
 // End-to-end UART test: replays sim/tpu_top_vectors.mem (python/sim_vectors.py)
 // through tpu_top with a fast bit time and checks every response byte.
-module tb_tpu_top;
+// Override with -P for other scripts, e.g. the audio stream on the heart model.
+module tb_tpu_top #(
+    parameter VECTORS = "sim/tpu_top_vectors.mem",
+    parameter WEIGHTS = "weights/tpu_weights.mem",
+    parameter LSH = "weights/tpu_lsh.mem",
+    parameter POSITION = "weights/tpu_position.mem"
+);
     localparam integer CPB = 8;
     logic clk = 1'b0, rst = 1'b1, rx = 1'b1;
     wire tx;
-    tpu_top #(.CLKS_PER_BIT(CPB), .TIMEOUT_CLKS(100_000)) dut(
+    tpu_top #(.CLKS_PER_BIT(CPB), .TIMEOUT_CLKS(100_000), .WEIGHTS_FILE(WEIGHTS),
+              .LSH_FILE(LSH), .POSITION_FILE(POSITION)) dut(
         .clk(clk), .rst(rst), .uart_rx_pin(rx), .uart_tx_pin(tx),
         .busy(), .computing(), .rx_activity(), .error_seen());
     always #5 clk = ~clk;
@@ -52,7 +59,7 @@ module tb_tpu_top;
 
     initial begin
         integer i, wait_cycles;
-        $readmemh("sim/tpu_top_vectors.mem", script);
+        $readmemh(VECTORS, script);
         repeat (20) @(posedge clk);
         rst = 1'b0;
         repeat (20) @(posedge clk);

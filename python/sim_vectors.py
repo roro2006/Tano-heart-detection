@@ -47,7 +47,7 @@ def with_cycles(frame: bytes, offset: int) -> Expected:
 
 def build(seed: int = 5) -> list[tuple[bytes, Expected]]:
     rng = random.Random(seed)
-    steps = [(request(OP_INFO), exact(response(OP_INFO, 0, b"TPU\x02" + bytes(4)))),
+    steps = [(request(OP_INFO), exact(response(OP_INFO, 0, b"TPU\x03" + bytes(4)))),
              (request(OP_ECHO, 7, b"hello"), exact(response(OP_ECHO, 0, b"hello")))]
     corrupt = bytearray(request(OP_ECHO, 0, b"xyz"))
     corrupt[-1] ^= 0xFF
@@ -81,7 +81,7 @@ def build(seed: int = 5) -> list[tuple[bytes, Expected]]:
     steps.append((attention_request(layer, x), exact(response(OP_ATTN, 0, encode_q8_matrix(expected)))))
     steps.append((request(OP_ATTN, layer, b"\x00" * 10), exact(response(OP_ATTN, 1))))
     steps.append((request(OP_INFER, 0, b"\x00" * 10), exact(response(OP_INFER, 1))))
-    steps.append((request(OP_INFO), with_cycles(response(OP_INFO, 0, b"TPU\x02" + bytes(4)), 4)))
+    steps.append((request(OP_INFO), with_cycles(response(OP_INFO, 0, b"TPU\x03" + bytes(4)), 4)))
     return steps
 
 
@@ -115,9 +115,45 @@ def build_ln(seed: int = 3) -> None:
     print("wrote sim/ln_input.mem and sim/ln_expected.mem")
 
 
+def build_audio(seconds: float = 6.0) -> list[tuple[bytes, Expected]]:
+    """Stream a real abnormal PhysioNet recording through AUDIO with the baked
+    heart model, checking the running totals after every packet."""
+    from host import (AUDIO_CHUNK, OP_AUDIO, audio_request, audio_response, audio_totals)
+    import heart_dataset
+    model = tpu_model.load(ROOT / "weights" / "heart")
+    record = next(r for r in heart_dataset.recordings() if r.label == 1 and r.database == "a")
+    samples = heart_dataset.read_samples(record.path)[:int(seconds * 2000)]
+    steps = []
+    for start in range(0, len(samples), AUDIO_CHUNK):
+        chunk = samples[start:start + AUDIO_CHUNK]
+        expected = audio_totals(model, samples[:start + len(chunk)])
+        steps.append((audio_request(chunk, reset=start == 0), exact(audio_response(*expected))))
+    # A reset restarts the totals; an odd byte count is rejected.
+    steps.append((audio_request(samples[:AUDIO_CHUNK], reset=True),
+                  exact(audio_response(*audio_totals(model, samples[:AUDIO_CHUNK])))))
+    steps.append((request(OP_AUDIO, 0, b"\x01\x02\x03"), exact(response(OP_AUDIO, 1))))
+    print(f"audio script: {record.name}, {len(samples)} samples, "
+          f"{audio_totals(model, samples)[0]} windows")
+    return steps
+
+
+def write_script(steps, name: str) -> None:
+    lines = []
+    for sent, expected in steps:
+        lines += [f"0{b:02x}" for b in sent]
+        lines += ["200" if b is ANY else f"1{b:02x}" for b in expected]
+    lines.append("fff")
+    out = ROOT / "sim" / name
+    out.write_text("\n".join(lines) + "\n")
+    print(f"wrote {out} ({len(lines)} entries)")
+
+
 def main() -> None:
     if "--ln" in sys.argv:
         build_ln()
+        return
+    if "--audio" in sys.argv:
+        write_script(build_audio(), "audio_vectors.mem")
         return
     lines = []
     for sent, expected in build():

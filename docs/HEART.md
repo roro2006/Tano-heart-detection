@@ -1,8 +1,33 @@
 # Heart-sound screening: data, features and model
 
-Status: the feature spec and a first model exist in Python, bit-exact with the
-on-chip format. The audio front end is not in RTL yet, and the board has not
-run this model. Results below are a baseline, not a screening-grade model.
+Status: the feature spec, a first model and the FPGA audio front end exist.
+The front end streams raw 2 kHz samples over USB (AUDIO) into the on-chip
+filterbank and transformer, bit-exact with the Python spec in simulation;
+the board build fits and meets timing but has not run on hardware yet. A
+microphone input is still to come. Results below are a baseline, not a
+screening-grade model.
+
+## On the FPGA (`rtl/audio_frontend.sv`)
+
+The board streams audio through the same pipeline as `heart_features.py`:
+16 biquads on three multipliers (three cycles per band, about 50 cycles per
+sample), per-band energies and log2 every 256 samples into a 16-frame ring,
+and every 8 frames after warm-up the mean-removed 16x16 window goes straight
+into the core's feature region and the whole model runs. The board keeps the
+number of windows and the sum of (pooled[1] − pooled[0]) since the last
+stream reset: positive means "abnormal: refer", the same rule as training.
+
+```sh
+python python/heart_host.py COM4 a0001          # one recording, checked against the PC
+python python/heart_host.py COM4 --split test   # sensitivity/specificity measured on the board
+make sim-audio                                  # a real recording through the RTL, bit-exact
+```
+
+The bitstream bakes `weights/heart/` (`rtl/tang_nano_20k_top.sv`), so the
+board boots ready to screen. Resources with the front end: 76% LUT4 + 20%
+ALU, 47% FF, 40/46 BSRAM, 36/48 MULT18X18, Fmax ≈ 34 MHz at a 27 MHz clock.
+To fit, the per-band filter state lives in a small RAM and the exp, log2 and
+coefficient tables have registered outputs so they map to block RAM.
 
 ## Data
 
