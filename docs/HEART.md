@@ -81,6 +81,14 @@ mean of (pooled[1] − pooled[0]) over its 2-s windows is positive.
 
 Databases c and d have 4 and 8 test recordings; their numbers are noise.
 
+Measured on the board (bitstream `da32570`, Tang Nano 20K, 2026-10-24,
+`python python/heart_host.py COM4 --split test`): all 484 test recordings in
+1,597 s, 484/484 identical to the PC reference, sensitivity 71.7%,
+specificity 89.9%, balanced 80.8%. The hardware reproduces the PC model
+exactly, so the numbers above are the board's numbers. Note that
+`host.py selftest` loads a random model and overwrites the baked weights;
+reload the bitstream before running `heart_host.py` after a selftest.
+
 Read these with care. The pooled number is dominated by database e, which
 the model separates almost perfectly; that may be genuine or another
 recording-condition confound. On the other databases the model is near

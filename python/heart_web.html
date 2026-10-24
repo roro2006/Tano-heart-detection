@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tano Heart Screen</title>
+<style>
+:root {
+  --bg: #0e1116; --panel: #161b22; --panel-2: #1c222b; --line: #2a313c;
+  --text: #e6e9ee; --muted: #8b95a3; --faint: #5b6574;
+  --abn: #ff5d6c; --abn-soft: rgba(255,93,108,.16);
+  --nor: #3ecf8e; --nor-soft: rgba(62,207,142,.15);
+  --accent: #6aa8ff; --wave: #9fb3c8;
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 16px; padding: 14px 20px;
+  border-bottom: 1px solid var(--line); }
+header h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+header h1 span { color: var(--abn); }
+.pill { font: 12px var(--mono); padding: 3px 10px; border-radius: 99px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+.pill.ok { color: var(--nor); border-color: rgba(62,207,142,.4); }
+.pill.bad { color: var(--abn); border-color: rgba(255,93,108,.4); }
+.spacer { flex: 1; }
+main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 53px); }
+aside { border-right: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+select, input, button { font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+input { width: 100%; }
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #0b1220; border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+.seg button.on { background: var(--panel-2); color: var(--text); }
+.list { flex: 1; overflow: auto; border: 1px solid var(--line); border-radius: 8px; min-height: 200px; max-height: calc(100vh - 380px); }
+.row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;
+  border-bottom: 1px solid var(--panel-2); font-family: var(--mono); font-size: 13px; }
+.row:hover { background: var(--panel-2); }
+.row.sel { background: rgba(106,168,255,.14); }
+.row .db { color: var(--faint); font-size: 11px; }
+.tag { margin-left: auto; font-size: 11px; padding: 1px 7px; border-radius: 99px; }
+.tag.a { background: var(--abn-soft); color: var(--abn); }
+.tag.n { background: var(--nor-soft); color: var(--nor); }
+.hint { color: var(--faint); font-size: 12px; }
+section.stage { padding: 18px 22px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted);
+  margin: 0 0 10px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+.card h2 small { text-transform: none; letter-spacing: 0; color: var(--faint); font-weight: 400; }
+canvas { width: 100%; display: block; }
+.top { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+.verdict { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.verdict .big { font-size: 28px; font-weight: 700; letter-spacing: .3px; }
+.verdict .big.a { color: var(--abn); } .verdict .big.n { color: var(--nor); } .verdict .big.w { color: var(--muted); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); }
+.good { color: var(--nor); } .bad { color: var(--abn); }
+.bottom { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+.tally { display: flex; gap: 22px; font-family: var(--mono); font-size: 13px; flex-wrap: wrap; }
+.tally b { display: block; font-size: 20px; font-family: system-ui, sans-serif; }
+.tally span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+#error { color: var(--abn); font-size: 13px; }
+.panel { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+.panel[hidden] { display: none; }
+.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.field input[type=range] { padding: 0; accent-color: var(--accent); }
+.meter { height: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+.meter div { height: 100%; width: 0; background: var(--nor); transition: width .08s; }
+.meter div.hot { background: var(--abn); }
+button.stop { background: var(--abn); border-color: var(--abn); color: #1a0b0e; }
+code { font-family: var(--mono); font-size: 12px; color: var(--text); }
+@media (max-width: 1000px) {
+  main { grid-template-columns: 1fr; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  .list { max-height: 260px; }
+  .top, .bottom { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>&#9829;</span> Tano heart screen</h1>
+  <span class="pill" id="board">connecting…</span>
+  <div class="spacer"></div>
+  <span class="hint">PhysioNet 2016 · 2 kHz · 16-band filterbank + transformer on a Tang Nano 20K</span>
+</header>
+<main>
+  <aside>
+    <div class="seg" id="mode">
+      <button data-mode="rec" class="on">Recordings</button>
+      <button data-mode="live">Live microphone</button>
+    </div>
+    <div id="livePanel" class="panel" hidden>
+      <label class="field">Microphone<select id="mic"><option value="">default microphone</option></select></label>
+      <label class="field">Listen for<select id="duration">
+        <option value="15">15 s</option><option value="30" selected>30 s</option>
+        <option value="60">60 s</option><option value="0">until stopped</option></select></label>
+      <label class="field">Gain <span id="gainval">×4</span>
+        <input id="gain" type="range" min="0" max="5" step="1" value="2"></label>
+      <div class="meter"><div id="level"></div></div>
+      <div class="hint" id="levelText">input level appears here while listening</div>
+      <button id="listen" class="primary">Start listening</button>
+      <p class="hint">Place a stethoscope microphone on the chest (mitral or aortic area) and keep still.
+        The model was trained on stethoscope recordings; a laptop microphone is a new recording
+        condition and its verdict means little. Each session is saved to <code>data/live/</code>.</p>
+    </div>
+    <div id="recPanel" class="panel">
+    <div class="controls">
+      <select id="split"><option value="test">test split</option><option value="val">validation</option>
+        <option value="train">train</option><option value="">all</option></select>
+      <select id="label"><option value="">any label</option><option value="1">abnormal</option>
+        <option value="0">normal</option></select>
+    </div>
+    <input id="search" placeholder="search, e.g. a0001" autocomplete="off">
+    <div class="list" id="list"></div>
+    <div class="seg" id="pace">
+      <button data-pace="realtime" class="on">Real time + audio</button>
+      <button data-pace="fast">As fast as the link</button>
+    </div>
+    <div class="controls">
+      <button id="random">Random</button>
+      <button id="go" class="primary" disabled>Screen</button>
+    </div>
+    </div>
+    <div id="error"></div>
+  </aside>
+  <section class="stage">
+    <div class="top">
+      <div class="card">
+        <h2>Recording <small id="recinfo">pick one on the left</small></h2>
+        <canvas id="wave" height="170"></canvas>
+        <div class="legend" style="margin-top:8px">
+          <span><i style="background:var(--wave)"></i>sound sent to the board</span>
+          <span><i style="background:var(--abn)"></i>window votes abnormal</span>
+          <span><i style="background:var(--nor)"></i>window votes normal</span>
+        </div>
+      </div>
+      <div class="card verdict">
+        <h2>Board verdict</h2>
+        <div class="big w" id="verdict">—</div>
+        <dl class="kv">
+          <dt>Ground truth</dt><dd id="truth">—</dd>
+          <dt>Windows</dt><dd id="windows">—</dd>
+          <dt>Margin</dt><dd id="margin">—</dd>
+          <dt>PC check</dt><dd id="check">—</dd>
+          <dt>Link time</dt><dd id="timing">—</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="bottom">
+      <div class="card">
+        <h2>Running margin <small>sum of (abnormal − normal) over 2-s windows; above zero means refer</small></h2>
+        <canvas id="margins" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h2>Latest window <small id="winlabel">16 frames × 16 bands</small></h2>
+        <canvas id="heat" height="240"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>This session</h2>
+      <div class="tally" id="tally"></div>
+    </div>
+  </section>
+</main>
+<audio id="audio" preload="auto"></audio>
+<script>
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let catalog = [], selected = null, pace = "realtime", run = null, source = null;
+const session = { tp: 0, fn: 0, tn: 0, fp: 0, identical: 0, checked: 0 };
+
+fetch("/api/board").then(r => r.json()).then(b => {
+  const el = $("board");
+  el.textContent = b.version ? `${b.magic} v${b.version} · ${b.port}` : b.port;
+  el.className = "pill ok";
+}).catch(() => { $("board").textContent = "no server"; $("board").className = "pill bad"; });
+
+fetch("/api/recordings").then(r => r.json()).then(items => { catalog = items; renderList(); });
+["split", "label"].forEach(id => $(id).addEventListener("change", renderList));
+$("search").addEventListener("input", renderList);
+
+function filtered() {
+  const split = $("split").value, label = $("label").value, q = $("search").value.trim().toLowerCase();
+  return catalog.filter(r => (!split || r.split === split) && (label === "" || String(r.label) === label)
+    && (!q || r.name.includes(q)));
+}
+function renderList() {
+  const rows = filtered();
+  $("list").innerHTML = rows.slice(0, 600).map(r =>
+    `<div class="row${r.name === selected ? " sel" : ""}" data-name="${r.name}">${r.name}
+      <span class="db">db ${r.database}</span>
+      <span class="tag ${r.label ? "a" : "n"}">${r.label ? "abnormal" : "normal"}</span></div>`).join("")
+    + (rows.length > 600 ? `<div class="row hint">${rows.length - 600} more, narrow the search</div>` : "");
+}
+$("list").addEventListener("click", e => {
+  const row = e.target.closest(".row[data-name]");
+  if (row) select(row.dataset.name);
+});
+$("list").addEventListener("dblclick", e => { if (e.target.closest(".row[data-name]")) start(); });
+function select(name) {
+  selected = name; renderList(); $("go").disabled = !!run;
+  const r = catalog.find(x => x.name === name);
+  $("recinfo").textContent = `${name} · database ${r.database} · ${r.split}`;
+}
+$("random").addEventListener("click", () => {
+  const rows = filtered(); if (!rows.length) return;
+  select(rows[Math.floor(Math.random() * rows.length)].name); start();
+});
+$("pace").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  pace = b.dataset.pace;
+  [...$("pace").children].forEach(x => x.classList.toggle("on", x === b));
+});
+$("go").addEventListener("click", start);
+
+function start() {
+  if (!selected || run) return;
+  $("error").textContent = "";
+  if (source) source.close();
+  const audio = $("audio");
+  audio.pause();
+  if (pace === "realtime") {
+    // Start playback inside the click so the browser allows it, then hold it
+    // at zero until the server starts streaming.
+    audio.src = `/api/wav?name=${encodeURIComponent(selected)}`;
+    audio.play().then(() => { if (!run || !run.meta) { audio.pause(); audio.currentTime = 0; } }).catch(() => {});
+  }
+  run = { meta: null, sent: 0, margins: [], totals: [], latest: -1, result: null, reference: null };
+  $("go").disabled = true; $("random").disabled = true;
+  setVerdict("Listening…", "w");
+  ["truth", "windows", "margin", "check", "timing"].forEach(id => $(id).textContent = "—");
+  source = new EventSource(`/api/run?name=${encodeURIComponent(selected)}&pace=${pace}`);
+  source.addEventListener("meta", e => {
+    run.meta = JSON.parse(e.data);
+    const m = run.meta;
+    $("truth").innerHTML = m.label ? '<span class="bad">abnormal</span>' : '<span class="good">normal</span>';
+    $("recinfo").textContent = `${m.name} · database ${m.database} · ${m.split} · ${(m.samples / m.rate).toFixed(1)} s`;
+    if (m.realtime) { audio.currentTime = 0; audio.play().catch(() => {}); }
+    draw();
+  });
+  source.addEventListener("progress", e => {
+    const p = JSON.parse(e.data);
+    run.sent = p.sent;
+    $("windows").textContent = p.windows;
+    $("margin").textContent = p.margin.toLocaleString();
+    if (p.windows) setVerdict(p.margin > 0 ? "Leaning abnormal" : "Leaning normal", "w");
+    draw();
+  });
+  source.addEventListener("window", e => {
+    const w = JSON.parse(e.data);
+    run.margins[w.index] = w.margin; run.totals[w.index] = w.total; run.latest = w.index;
+  });
+  source.addEventListener("result", e => {
+    const r = run.result = JSON.parse(e.data);
+    setVerdict(r.abnormal ? "ABNORMAL · refer" : "Normal", r.abnormal ? "a" : "n");
+    $("timing").textContent = `${r.elapsed.toFixed(1)} s for ${r.audio_seconds.toFixed(1)} s of audio`;
+    $("check").textContent = "PC reference running…";
+    const truth = run.meta.label === 1;
+    if (truth) r.abnormal ? session.tp++ : session.fn++; else r.abnormal ? session.fp++ : session.tn++;
+    renderTally(); draw();
+  });
+  source.addEventListener("reference", e => {
+    const ref = run.reference = JSON.parse(e.data);
+    session.checked++; if (ref.identical) session.identical++;
+    draw();
+    $("check").innerHTML = ref.identical
+      ? '<span class="good">identical to PC</span>'
+      : `<span class="bad">mismatch: PC ${ref.windows} windows, margin ${ref.margin}</span>`;
+    renderTally();
+  });
+  source.addEventListener("error", e => {
+    if (e.data) $("error").textContent = JSON.parse(e.data).message;
+    else if (!run.result) $("error").textContent = "lost the connection to the server";
+    finish();
+  });
+  source.addEventListener("end", finish);
+}
+function finish() {
+  if (source) source.close();
+  source = null; run && (run.done = true);
+  const r = run; run = null;
+  $("go").disabled = !selected; $("random").disabled = false;
+  if (r) runShown = r;
+  draw();
+}
+let runShown = null;
+function current() { return run || runShown; }
+
+function setVerdict(text, cls) { const v = $("verdict"); v.textContent = text; v.className = "big " + cls; }
+function renderTally() {
+  const s = session, n = s.tp + s.fn + s.tn + s.fp;
+  const pct = (a, b) => b ? (100 * a / b).toFixed(1) + "%" : "—";
+  const se = s.tp + s.fn ? s.tp / (s.tp + s.fn) : null, sp = s.tn + s.fp ? s.tn / (s.tn + s.fp) : null;
+  const bal = se !== null && sp !== null ? (50 * (se + sp)).toFixed(1) + "%" : "—";
+  $("tally").innerHTML = [["screened", n], ["correct", `${s.tp + s.tn}/${n}`], ["sensitivity", pct(s.tp, s.tp + s.fn)],
+    ["specificity", pct(s.tn, s.tn + s.fp)], ["balanced", bal], ["identical to PC", `${s.identical}/${s.checked}`]]
+    .map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join("");
+}
+renderTally();
+
+// Mode switch.
+$("mode").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || run) return;
+  [...$("mode").children].forEach(x => x.classList.toggle("on", x === b));
+  $("livePanel").hidden = b.dataset.mode !== "live";
+  $("recPanel").hidden = b.dataset.mode === "live";
+});
+
+// Live microphone: capture, low-pass, resample to 2 kHz, post 1024-sample chunks.
+const GAINS = [1, 2, 4, 8, 16, 32];
+let mic = null;
+$("gain").addEventListener("input", () => $("gainval").textContent = "×" + GAINS[$("gain").value]);
+$("listen").addEventListener("click", () => mic ? stopLive() : startLive());
+
+async function listMics() {
+  const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+  const keep = $("mic").value;
+  $("mic").innerHTML = devices.map(d => `<option value="${d.deviceId}">${d.label || "microphone"}</option>`).join("")
+    || '<option value="">default microphone</option>';
+  if (keep) $("mic").value = keep;
+}
+
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", body });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+async function startLive() {
+  $("error").textContent = "";
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: {
+      deviceId: $("mic").value ? { exact: $("mic").value } : undefined,
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  } catch (e) { $("error").textContent = "microphone: " + e.message; return; }
+  listMics().catch(() => {});
+  let session;
+  try { session = await post("/api/live/start"); }
+  catch (e) { stream.getTracks().forEach(t => t.stop()); $("error").textContent = e.message; return; }
+
+  const ctx = new AudioContext();
+  const source = ctx.createMediaStreamSource(stream);
+  // Three 700 Hz low-passes (6th order) keep energy above the 1 kHz Nyquist
+  // of the 2 kHz stream out before resampling.
+  let node = source;
+  for (let i = 0; i < 3; i++) {
+    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 700; f.Q.value = 0.7;
+    node.connect(f); node = f;
+  }
+  const tap = `registerProcessor("tap", class extends AudioWorkletProcessor {
+    process(inputs) { const c = inputs[0][0]; if (c) this.port.postMessage(c.slice(0)); return true; } });`;
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([tap], { type: "text/javascript" })));
+  const worklet = new AudioWorkletNode(ctx, "tap");
+  const mute = ctx.createGain(); mute.gain.value = 0;
+  node.connect(worklet); worklet.connect(mute); mute.connect(ctx.destination);
+
+  const seconds = +$("duration").value;
+  const rate = session.rate;
+  mic = { stream, ctx, session, seconds, step: ctx.sampleRate / rate, pos: 0, input: [], out: [], env: [],
+          sending: false, stopping: false, total: 0 };
+  run = { live: true, sent: 0, margins: [], totals: [], latest: -1, result: null, reference: null,
+          meta: { name: "live", live: true, label: null, rate, samples: (seconds || 30) * rate,
+                  envelope_step: 20, envelope: [], features: [], frame: session.frame } };
+  runShown = null;
+  $("listen").textContent = "Stop"; $("listen").className = "stop";
+  $("recinfo").textContent = `live microphone · ${ctx.sampleRate} Hz resampled to ${rate} Hz`;
+  setVerdict("Listening…", "w");
+  $("truth").textContent = "unknown (live)";
+  ["windows", "margin", "check", "timing"].forEach(id => $(id).textContent = "—");
+  worklet.port.onmessage = e => onAudio(e.data);
+  requestAnimationFrame(animate);
+}
+
+function onAudio(block) {
+  const m = mic; if (!m || m.stopping) return;
+  for (const v of block) m.input.push(v);
+  const gain = GAINS[$("gain").value] * 32767;
+  let peak = 0, sum = 0, n = 0;
+  while (m.pos + 1 < m.input.length) {
+    const i = Math.floor(m.pos), f = m.pos - i;
+    const y = (m.input[i] + f * (m.input[i + 1] - m.input[i])) * gain;
+    const s = Math.max(-32768, Math.min(32767, Math.round(y)));
+    m.out.push(s); m.env.push(s);
+    peak = Math.max(peak, Math.abs(s)); sum += s * s; n++;
+    if (m.env.length === run.meta.envelope_step) {
+      run.meta.envelope.push([Math.min(...m.env), Math.max(...m.env)]); m.env = [];
+    }
+    m.pos += m.step;
+  }
+  const drop = Math.floor(m.pos); m.input.splice(0, drop); m.pos -= drop;
+  if (n) {
+    const db = 20 * Math.log10(Math.sqrt(sum / n) / 32768 + 1e-9);
+    $("level").style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + "%";
+    $("level").className = peak >= 32767 ? "hot" : "";
+    $("levelText").textContent = peak >= 32767 ? "clipping: lower the gain" : `level ${db.toFixed(0)} dBFS`;
+  }
+  pump();
+}
+
+async function pump() {
+  const m = mic; if (!m || m.sending) return;
+  m.sending = true;
+  try {
+    while (m.out.length >= m.session.chunk || (m.stopping && m.out.length)) {
+      if (m.seconds && m.total >= m.seconds * run.meta.rate) { m.out = []; break; }
+      const chunk = Int16Array.from(m.out.splice(0, m.session.chunk));
+      const r = await post(`/api/live/chunk?id=${m.session.id}`, chunk.buffer);
+      m.total += chunk.length; run.sent = m.total;
+      for (const w of r.new) {
+        run.margins[w.index] = w.margin; run.totals[w.index] = w.total; run.latest = w.index;
+        run.meta.features[w.index] = w.features;
+      }
+      $("windows").textContent = r.windows;
+      $("margin").textContent = r.margin.toLocaleString();
+      if (r.windows) setVerdict(r.margin > 0 ? "Leaning abnormal" : "Leaning normal", "w");
+      if (!m.seconds) run.meta.samples = Math.max(run.meta.samples, m.total + 5 * run.meta.rate);
+    }
+  } catch (e) { $("error").textContent = e.message; m.sending = false; teardown(); return; }
+  m.sending = false;
+  if (m.seconds && m.total >= m.seconds * run.meta.rate && !m.stopping) stopLive();
+  else if (m.stopping && !m.out.length) finishLive();
+}
+
+function teardown() {
+  const m = mic; if (!m) return;
+  m.stream.getTracks().forEach(t => t.stop()); m.ctx.close();
+  mic = null;
+  $("listen").textContent = "Start listening"; $("listen").className = "primary";
+  $("level").style.width = "0";
+  const r = run; run = null; if (r) { r.done = true; runShown = r; } draw();
+}
+
+function stopLive() {
+  if (!mic || mic.stopping) return;
+  mic.stopping = true;
+  $("listen").textContent = "Finishing…"; $("listen").disabled = true;
+  mic.stream.getTracks().forEach(t => t.stop());
+  if (!mic.sending) pump();
+}
+
+async function finishLive() {
+  const m = mic, r = run;
+  try {
+    const res = await post(`/api/live/stop?id=${m.session.id}`);
+    r.result = res; r.reference = res.reference;
+    if (!res.windows) setVerdict("Too short", "w");
+    else setVerdict(res.abnormal ? "ABNORMAL · refer" : "Normal", res.abnormal ? "a" : "n");
+    $("timing").textContent = `${res.seconds.toFixed(1)} s heard` + (res.saved ? ` · saved ${res.saved}` : "");
+    $("check").innerHTML = res.reference.identical
+      ? '<span class="good">identical to PC</span>'
+      : `<span class="bad">mismatch: PC ${res.reference.windows} windows, margin ${res.reference.margin}</span>`;
+  } catch (e) { $("error").textContent = e.message; }
+  $("listen").disabled = false;
+  teardown();
+}
+
+function animate() { if (mic) { draw(); requestAnimationFrame(animate); } }
+
+// Drawing.
+function fit(canvas) {
+  const r = devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.height / (canvas._r || 1);
+  if (!canvas._h) canvas._h = canvas.height;
+  canvas.width = w * r; canvas.height = canvas._h * r; canvas._r = r;
+  const g = canvas.getContext("2d"); g.setTransform(r, 0, 0, r, 0, 0);
+  return [g, w, canvas._h];
+}
+function windowSpan(m, i) {  // window i covers frames [2 + 8i, 18 + 8i)
+  return [(2 + 8 * i) * m.frame, (18 + 8 * i) * m.frame];
+}
+function draw() { drawWave(); drawMargins(); drawHeat(); }
+
+function drawWave() {
+  const [g, w, h] = fit($("wave")), r = current();
+  g.clearRect(0, 0, w, h);
+  if (!r || !r.meta) return;
+  const m = r.meta, n = m.samples, x = s => s / n * w;
+  for (let i = 0; i < r.margins.length; i++) {
+    if (r.margins[i] == null) continue;
+    const [a, b] = windowSpan(m, i);
+    g.fillStyle = r.margins[i] > 0 ? "rgba(255,93,108,.13)" : "rgba(62,207,142,.11)";
+    g.fillRect(x(a), 0, x(b) - x(a), h);
+    g.fillStyle = r.margins[i] > 0 ? css("--abn") : css("--nor");
+    g.fillRect(x(a + (b - a) * .25), h - 5, x(b) - x(a) - (x(b) - x(a)) * .5, 4);
+  }
+  let peak = 1; for (const [lo, hi] of m.envelope) peak = Math.max(peak, -lo, hi);
+  const mid = (h - 8) / 2, sentPt = r.sent / m.envelope_step;
+  m.envelope.forEach(([lo, hi], i) => {
+    g.fillStyle = i < sentPt ? css("--wave") : css("--line");
+    const px = i / m.envelope.length * w;
+    g.fillRect(px, mid - hi / peak * mid * .95, Math.max(1, w / m.envelope.length), Math.max(1, (hi - lo) / peak * mid * .95));
+  });
+  if (!r.done && !r.result) {
+    g.fillStyle = css("--accent"); g.fillRect(x(r.sent) - 1, 0, 2, h - 8);
+  }
+  g.fillStyle = css("--faint"); g.font = "11px " + css("--mono");
+  for (let t = 0; t <= n / m.rate; t += 5) g.fillText(t + " s", x(t * m.rate) + 3, 12);
+}
+
+function drawMargins() {
+  const [g, w, h] = fit($("margins")), r = current();
+  g.clearRect(0, 0, w, h);
+  if (!r || !r.meta) return;
+  const m = r.meta, expected = Math.max(1, Math.floor((m.samples / m.frame - 18) / 8) + 1);
+  const n = Math.max(expected, r.totals.length), pad = 36;
+  const vals = r.totals.concat(r.margins.filter(v => v != null), [0]);
+  let span = Math.max(...vals.map(Math.abs), 1) * 1.1;
+  const y = v => h / 2 - v / span * (h / 2 - 12), bw = (w - pad) / n;
+  g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(pad, y(0)); g.lineTo(w, y(0)); g.stroke();
+  g.fillStyle = css("--faint"); g.font = "11px " + css("--mono");
+  g.fillText("refer", 2, 14); g.fillText("normal", 2, h - 4); g.fillText("0", 2, y(0) + 4);
+  r.margins.forEach((v, i) => {
+    if (v == null) return;
+    g.fillStyle = v > 0 ? "rgba(255,93,108,.55)" : "rgba(62,207,142,.5)";
+    const x0 = pad + i * bw + bw * .15;
+    g.fillRect(x0, Math.min(y(0), y(v)), bw * .7, Math.abs(y(v) - y(0)));
+  });
+  if (r.totals.length) {
+    g.strokeStyle = css("--text"); g.lineWidth = 2; g.beginPath();
+    g.moveTo(pad, y(0));
+    r.totals.forEach((v, i) => g.lineTo(pad + (i + 1) * bw, y(v)));
+    g.stroke(); g.lineWidth = 1;
+    const last = r.totals[r.totals.length - 1];
+    g.fillStyle = last > 0 ? css("--abn") : css("--nor");
+    g.beginPath(); g.arc(pad + r.totals.length * bw, y(last), 4, 0, 7); g.fill();
+  }
+  if (r.reference) {
+    g.strokeStyle = css("--accent"); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(pad, y(0));
+    let acc = 0; r.reference.margins.forEach((v, i) => { acc += v; g.lineTo(pad + (i + 1) * bw, y(acc)); });
+    g.stroke(); g.setLineDash([]);
+    g.fillStyle = css("--accent"); g.fillText("PC reference (dashed)", w - 150, 14);
+  }
+}
+
+function drawHeat() {
+  const [g, w, h] = fit($("heat")), r = current();
+  g.clearRect(0, 0, w, h);
+  if (!r || !r.meta || r.latest < 0) {
+    g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("filterbank energies appear here", 10, 20); return;
+  }
+  const f = r.meta.features[r.latest]; if (!f) return;
+  $("winlabel").textContent = `window ${r.latest + 1} · margin ${r.margins[r.latest] ?? "?"}`;
+  let lo = Infinity, hi = -Infinity; f.flat().forEach(v => { lo = Math.min(lo, v); hi = Math.max(hi, v); });
+  const left = 34, bottom = 18, cw = (w - left) / 16, ch = (h - bottom) / 16;
+  for (let t = 0; t < 16; t++) for (let b = 0; b < 16; b++) {
+    const v = (f[t][b] - lo) / Math.max(1, hi - lo);
+    g.fillStyle = `hsl(${220 - 220 * v}, 70%, ${12 + 50 * v}%)`;
+    g.fillRect(left + t * cw, (15 - b) * ch, cw + .5, ch + .5);
+  }
+  g.fillStyle = css("--faint"); g.font = "10px " + css("--mono");
+  g.fillText("800", 2, 10); g.fillText("25 Hz", 0, h - bottom - 2); g.fillText("time → 2 s", left, h - 4);
+}
+addEventListener("resize", draw);
+</script>
+</body>
+</html>
