@@ -1,0 +1,199 @@
+{
+  "task": "AF versus non-AF on 16 consecutive beats of single-lead ECG",
+  "classes": {
+    "0": "non-AF (all other annotated rhythms except flutter and junctional)",
+    "1": "AF"
+  },
+  "decision": "AF when pooled[1] - pooled[0] > threshold (integer margin from tpu_model.forward)",
+  "threshold": 816.0,
+  "normaliser": {
+    "centre": [
+      0.7160000205039978,
+      0.0,
+      0.07056911289691925,
+      0.10449880361557007,
+      -1.7755789756774902,
+      1.804147720336914,
+      0.9986235499382019,
+      -2.339655637741089,
+      -0.10465298593044281,
+      0.6966451406478882,
+      1.0933834314346313,
+      -1.0833070278167725,
+      28.0,
+      0.13066236674785614,
+      0.9770321846008301,
+      0.0
+    ],
+    "scale": [
+      0.2075640708208084,
+      0.0474431999027729,
+      0.08718480169773102,
+      0.1325431615114212,
+      3.435391426086426,
+      2.507275104522705,
+      5.008802890777588,
+      2.5109403133392334,
+      4.59938907623291,
+      1.612382411956787,
+      3.7861247062683105,
+      2.1873698234558105,
+      11.860799789428711,
+      0.04262668639421463,
+      0.026843754574656487,
+      1.0
+    ],
+    "clip": 6.0,
+    "q": "round(clip((x - centre) / scale) * 256)"
+  },
+  "features": [
+    "rr_prev_s",
+    "rr_change_s",
+    "rr_sd8_s",
+    "rr_rmssd8_s",
+    "dct1",
+    "dct2",
+    "dct3",
+    "dct4",
+    "dct5",
+    "dct6",
+    "dct7",
+    "dct8",
+    "qrs_width_ms",
+    "area_over_peak",
+    "template_corr8",
+    "missing_or_clipped"
+  ],
+  "preprocessing": {
+    "lead": "ECG1",
+    "fs": 250,
+    "beats_per_sequence": 16,
+    "hop_beats": 8,
+    "lookback_beats": 8,
+    "beat_window_ms": [
+      -248,
+      348
+    ],
+    "band_pass_hz": [
+      0.5,
+      40
+    ],
+    "labels": {
+      "1": "(AFIB",
+      "0": "(N (all other rhythms, not necessarily sinus)"
+    },
+    "excluded": "(AFL, (J, beats before the first rhythm annotation, sequences crossing a rhythm change"
+  },
+  "split": {
+    "folds": {
+      "05091": 0,
+      "06453": 2,
+      "04015": 4,
+      "05261": 3,
+      "04048": 1,
+      "08434": 3,
+      "04126": 0,
+      "04908": 2,
+      "07910": 1,
+      "04043": 4,
+      "08219": 1,
+      "08378": 0,
+      "06995": 2,
+      "04746": 3,
+      "05121": 4,
+      "07879": 4,
+      "08455": 0,
+      "08215": 2,
+      "08405": 3,
+      "04936": 1,
+      "06426": 2,
+      "07162": 3,
+      "07859": 1
+    },
+    "final_model": {
+      "train": [
+        "04015",
+        "04043",
+        "04048",
+        "04746",
+        "04908",
+        "04936",
+        "05121",
+        "05261",
+        "06426",
+        "06453",
+        "06995",
+        "07162",
+        "07859",
+        "07879",
+        "07910",
+        "08215",
+        "08219",
+        "08405",
+        "08434"
+      ],
+      "val": [
+        "04126",
+        "05091",
+        "08378",
+        "08455"
+      ],
+      "test": []
+    }
+  },
+  "validation": {
+    "n": 22858,
+    "af": 7476,
+    "sensitivity": 0.9674959871589085,
+    "specificity": 0.9353140033805747,
+    "balanced_accuracy": 0.9514049952697416,
+    "precision": 0.8790714632960622,
+    "average_precision": 0.9184211828748594
+  },
+  "exact_check": true,
+  "baseline": {
+    "weights": [
+      3.680684361670296,
+      -2.9577730466683776,
+      -0.9452237006208795,
+      3.2575173234878796
+    ],
+    "bias": -0.2966397744722715,
+    "mean": [
+      0.14710070082624543,
+      0.2083295497772966,
+      0.15285533859516498,
+      0.42438187959233875
+    ],
+    "std": [
+      0.1608009813937984,
+      0.22727048590365553,
+      0.14831558776479048,
+      0.36149021685431104
+    ],
+    "threshold": 0.00393437948358738,
+    "val": {
+      "n": 22858,
+      "af": 7476,
+      "sensitivity": 0.9438202247191011,
+      "specificity": 0.9014432453517098,
+      "balanced_accuracy": 0.9226317350354054,
+      "precision": 0.8231451236584227,
+      "average_precision": 0.9124846591426368
+    }
+  },
+  "cross_validation": "experiments/ecg_af/summary.json",
+  "args": {
+    "fold": null,
+    "summary": false,
+    "final": true,
+    "output": "C:\\Users\\rores\\dev\\Tano-heart-detection\\weights\\ecg_af",
+    "steps": 3000,
+    "qat_steps": 1500,
+    "batch": 128,
+    "eval_every": 750,
+    "val_stride": 4,
+    "threads": 3,
+    "seed": 0
+  }
+}

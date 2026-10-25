@@ -1,0 +1,518 @@
+{
+  "baseline": {
+    "folds": [
+      {
+        "n": 22858,
+        "af": 7476,
+        "sensitivity": 0.9788657035848047,
+        "specificity": 0.8476140943960473,
+        "balanced_accuracy": 0.913239898990426,
+        "precision": 0.7574001241978886,
+        "average_precision": 0.9137530177871281
+      },
+      {
+        "n": 29594,
+        "af": 14248,
+        "sensitivity": 0.7783548568220101,
+        "specificity": 0.803010556496807,
+        "balanced_accuracy": 0.7906827066594085,
+        "precision": 0.7858003259406221,
+        "average_precision": 0.8017327243277411
+      },
+      {
+        "n": 30995,
+        "af": 14797,
+        "sensitivity": 0.9783739947286613,
+        "specificity": 0.8921471786640326,
+        "balanced_accuracy": 0.9352605866963469,
+        "precision": 0.8923200197238659,
+        "average_precision": 0.9592010660730509
+      },
+      {
+        "n": 29087,
+        "af": 14737,
+        "sensitivity": 0.9966071792087942,
+        "specificity": 0.8690592334494773,
+        "balanced_accuracy": 0.9328332063291358,
+        "precision": 0.8865749124713268,
+        "average_precision": 0.9696458927773746
+      },
+      {
+        "n": 26186,
+        "af": 10659,
+        "sensitivity": 0.8607749319823623,
+        "specificity": 0.9185290139756553,
+        "balanced_accuracy": 0.8896519729790089,
+        "precision": 0.8788314176245211,
+        "average_precision": 0.8501946981724756
+      }
+    ],
+    "per_record": {
+      "04126": {
+        "n": 5389,
+        "af": 389,
+        "sensitivity": 0.9640102827763496,
+        "specificity": 0.6248,
+        "balanced_accuracy": 0.7944051413881748,
+        "precision": 0.16659262549977788,
+        "average_precision": 0.27528703306492597
+      },
+      "05091": {
+        "n": 4606,
+        "af": 5,
+        "sensitivity": 1.0,
+        "specificity": 0.9241469245816127,
+        "balanced_accuracy": 0.9620734622908064,
+        "precision": 0.014124293785310734,
+        "average_precision": 0.07124816314289997
+      },
+      "08378": {
+        "n": 5303,
+        "af": 1421,
+        "sensitivity": 0.94018296973962,
+        "specificity": 0.9734672849046883,
+        "balanced_accuracy": 0.9568251273221542,
+        "precision": 0.9284225156358582,
+        "average_precision": 0.9857056969255107
+      },
+      "08455": {
+        "n": 7560,
+        "af": 5661,
+        "sensitivity": 0.9895778131072249,
+        "specificity": 0.9915745129015271,
+        "balanced_accuracy": 0.990576163004376,
+        "precision": 0.9971520113919544,
+        "average_precision": 0.9995698112229223
+      },
+      "04048": {
+        "n": 5356,
+        "af": 88,
+        "sensitivity": 0.5227272727272727,
+        "specificity": 0.9210326499620349,
+        "balanced_accuracy": 0.7218799613446538,
+        "precision": 0.09956709956709957,
+        "average_precision": 0.08987933569116334
+      },
+      "04936": {
+        "n": 5713,
+        "af": 4857,
+        "sensitivity": 0.8089355569281449,
+        "specificity": 0.9731308411214953,
+        "balanced_accuracy": 0.8910331990248201,
+        "precision": 0.9941801619433198,
+        "average_precision": 0.987914867319313
+      },
+      "07859": {
+        "n": 6669,
+        "af": 6669,
+        "sensitivity": 0.7059529164792323,
+        "specificity": NaN,
+        "balanced_accuracy": 0.7059529164792323,
+        "precision": 1.0,
+        "average_precision": 1.0
+      },
+      "07910": {
+        "n": 4590,
+        "af": 974,
+        "sensitivity": 0.9917864476386037,
+        "specificity": 0.9886615044247787,
+        "balanced_accuracy": 0.9902239760316912,
+        "precision": 0.9592850049652433,
+        "average_precision": 0.9931390200747818
+      },
+      "08219": {
+        "n": 7266,
+        "af": 1660,
+        "sensitivity": 0.8680722891566265,
+        "specificity": 0.5463788797716732,
+        "balanced_accuracy": 0.7072255844641498,
+        "precision": 0.3616967871485944,
+        "average_precision": 0.3796226138349668
+      },
+      "04908": {
+        "n": 7771,
+        "af": 703,
+        "sensitivity": 0.8733997155049786,
+        "specificity": 0.9568477645727221,
+        "balanced_accuracy": 0.9151237400388503,
+        "precision": 0.6681175190424374,
+        "average_precision": 0.8040858476851096
+      },
+      "06426": {
+        "n": 6380,
+        "af": 6239,
+        "sensitivity": 0.9852540471229364,
+        "specificity": 0.5460992907801419,
+        "balanced_accuracy": 0.7656766689515391,
+        "precision": 0.9896957011753341,
+        "average_precision": 0.9900733282477896
+      },
+      "06453": {
+        "n": 4319,
+        "af": 38,
+        "sensitivity": 0.9473684210526315,
+        "specificity": 0.9605232422331231,
+        "balanced_accuracy": 0.9539458316428773,
+        "precision": 0.17560975609756097,
+        "average_precision": 0.32939306110669
+      },
+      "06995": {
+        "n": 7018,
+        "af": 3573,
+        "sensitivity": 0.964735516372796,
+        "specificity": 0.6510885341074021,
+        "balanced_accuracy": 0.8079120252400991,
+        "precision": 0.7414497741449774,
+        "average_precision": 0.8807343076392732
+      },
+      "08215": {
+        "n": 5507,
+        "af": 4244,
+        "sensitivity": 0.9974081055607917,
+        "specificity": 0.9944576405384006,
+        "balanced_accuracy": 0.9959328730495962,
+        "precision": 0.9983490566037736,
+        "average_precision": 0.9999717987979457
+      },
+      "04746": {
+        "n": 6075,
+        "af": 3825,
+        "sensitivity": 0.996078431372549,
+        "specificity": 0.8826666666666667,
+        "balanced_accuracy": 0.9393725490196079,
+        "precision": 0.93519882179676,
+        "average_precision": 0.9919598686242059
+      },
+      "05261": {
+        "n": 5714,
+        "af": 90,
+        "sensitivity": 1.0,
+        "specificity": 0.8143669985775249,
+        "balanced_accuracy": 0.9071834992887624,
+        "precision": 0.07936507936507936,
+        "average_precision": 0.1889951705683565
+      },
+      "07162": {
+        "n": 4726,
+        "af": 4726,
+        "sensitivity": 0.9997884045704613,
+        "specificity": NaN,
+        "balanced_accuracy": 0.9997884045704613,
+        "precision": 1.0,
+        "average_precision": 1.0
+      },
+      "08405": {
+        "n": 7508,
+        "af": 5817,
+        "sensitivity": 0.9943269726663229,
+        "specificity": 0.9562389118864577,
+        "balanced_accuracy": 0.9752829422763902,
+        "precision": 0.9873677022874702,
+        "average_precision": 0.9979137787509498
+      },
+      "08434": {
+        "n": 5064,
+        "af": 279,
+        "sensitivity": 0.996415770609319,
+        "specificity": 0.8961337513061651,
+        "balanced_accuracy": 0.946274760957742,
+        "precision": 0.35870967741935483,
+        "average_precision": 0.596144686536132
+      },
+      "04015": {
+        "n": 5512,
+        "af": 53,
+        "sensitivity": 0.9811320754716981,
+        "specificity": 0.871405019234292,
+        "balanced_accuracy": 0.926268547352995,
+        "precision": 0.06896551724137931,
+        "average_precision": 0.05995618062643196
+      },
+      "04043": {
+        "n": 7428,
+        "af": 1598,
+        "sensitivity": 0.7753441802252816,
+        "specificity": 0.9734133790737565,
+        "balanced_accuracy": 0.874378779649519,
+        "precision": 0.8888091822094691,
+        "average_precision": 0.8963501135816858
+      },
+      "05121": {
+        "n": 6027,
+        "af": 4017,
+        "sensitivity": 0.9444859347771969,
+        "specificity": 0.9059701492537313,
+        "balanced_accuracy": 0.9252280420154642,
+        "precision": 0.9525483304042179,
+        "average_precision": 0.9523269729831375
+      },
+      "07879": {
+        "n": 7219,
+        "af": 4991,
+        "sensitivity": 0.8194750550991785,
+        "specificity": 0.901705565529623,
+        "balanced_accuracy": 0.8605903103144008,
+        "precision": 0.9491761429566025,
+        "average_precision": 0.9237704660626165
+      }
+    }
+  },
+  "transformer": {
+    "folds": [
+      {
+        "n": 22858,
+        "af": 7476,
+        "sensitivity": 0.9839486356340289,
+        "specificity": 0.8712781172799375,
+        "balanced_accuracy": 0.9276133764569832,
+        "precision": 0.787917737789203,
+        "average_precision": 0.8890524557784639
+      },
+      {
+        "n": 29594,
+        "af": 14248,
+        "sensitivity": 0.6946939921392477,
+        "specificity": 0.827968200182458,
+        "balanced_accuracy": 0.7613310961608528,
+        "precision": 0.7894401020896474,
+        "average_precision": 0.8773961026907626
+      },
+      {
+        "n": 30995,
+        "af": 14797,
+        "sensitivity": 0.9782388321957154,
+        "specificity": 0.48333127546610694,
+        "balanced_accuracy": 0.7307850538309112,
+        "precision": 0.6336455962178252,
+        "average_precision": 0.7215387225035554
+      },
+      {
+        "n": 29087,
+        "af": 14737,
+        "sensitivity": 0.8293411142023478,
+        "specificity": 0.937979094076655,
+        "balanced_accuracy": 0.8836601041395014,
+        "precision": 0.9321232458816352,
+        "average_precision": 0.9562494125956096
+      },
+      {
+        "n": 26186,
+        "af": 10659,
+        "sensitivity": 0.8479219438971761,
+        "specificity": 0.9801635860114639,
+        "balanced_accuracy": 0.91404276495432,
+        "precision": 0.9670447250160497,
+        "average_precision": 0.9696318633449102
+      }
+    ],
+    "per_record": {
+      "04126": {
+        "n": 5389,
+        "af": 389,
+        "sensitivity": 0.961439588688946,
+        "specificity": 0.636,
+        "balanced_accuracy": 0.798719794344473,
+        "precision": 0.17046490428441202,
+        "average_precision": 0.2731534869519575
+      },
+      "05091": {
+        "n": 4606,
+        "af": 5,
+        "sensitivity": 0.8,
+        "specificity": 0.966529015431428,
+        "balanced_accuracy": 0.883264507715714,
+        "precision": 0.02531645569620253,
+        "average_precision": 0.14247867620776417
+      },
+      "08378": {
+        "n": 5303,
+        "af": 1421,
+        "sensitivity": 0.9570724841660803,
+        "specificity": 1.0,
+        "balanced_accuracy": 0.9785362420830401,
+        "precision": 1.0,
+        "average_precision": 0.9975998233714263
+      },
+      "08455": {
+        "n": 7560,
+        "af": 5661,
+        "sensitivity": 0.9924041688747571,
+        "specificity": 0.9968404423380727,
+        "balanced_accuracy": 0.994622305606415,
+        "precision": 0.9989331436699858,
+        "average_precision": 0.9996638680943383
+      },
+      "04048": {
+        "n": 5356,
+        "af": 88,
+        "sensitivity": 1.0,
+        "specificity": 0.9422930903568717,
+        "balanced_accuracy": 0.9711465451784358,
+        "precision": 0.22448979591836735,
+        "average_precision": 0.9060943336401728
+      },
+      "04936": {
+        "n": 5713,
+        "af": 4857,
+        "sensitivity": 0.8373481572987441,
+        "specificity": 0.9731308411214953,
+        "balanced_accuracy": 0.9052394992101197,
+        "precision": 0.9943765281173594,
+        "average_precision": 0.9973971908154412
+      },
+      "07859": {
+        "n": 6669,
+        "af": 6669,
+        "sensitivity": 0.4757834757834758,
+        "specificity": NaN,
+        "balanced_accuracy": 0.4757834757834758,
+        "precision": 1.0,
+        "average_precision": 1.0
+      },
+      "07910": {
+        "n": 4590,
+        "af": 974,
+        "sensitivity": 0.9794661190965093,
+        "specificity": 1.0,
+        "balanced_accuracy": 0.9897330595482546,
+        "precision": 1.0,
+        "average_precision": 0.9994159304519067
+      },
+      "08219": {
+        "n": 7266,
+        "af": 1660,
+        "sensitivity": 0.9734939759036144,
+        "specificity": 0.5874063503389226,
+        "balanced_accuracy": 0.7804501631212686,
+        "precision": 0.41130058539068465,
+        "average_precision": 0.6619446632373867
+      },
+      "04908": {
+        "n": 7771,
+        "af": 703,
+        "sensitivity": 1.0,
+        "specificity": 0.10172608941709112,
+        "balanced_accuracy": 0.5508630447085455,
+        "precision": 0.09968803176403856,
+        "average_precision": 0.30486897664479345
+      },
+      "06426": {
+        "n": 6380,
+        "af": 6239,
+        "sensitivity": 0.99102420259657,
+        "specificity": 0.5602836879432624,
+        "balanced_accuracy": 0.7756539452699163,
+        "precision": 0.9900720576461169,
+        "average_precision": 0.9917100504145033
+      },
+      "06453": {
+        "n": 4319,
+        "af": 38,
+        "sensitivity": 1.0,
+        "specificity": 0.8649848166316281,
+        "balanced_accuracy": 0.932492408315814,
+        "precision": 0.06168831168831169,
+        "average_precision": 0.33961742316639276
+      },
+      "06995": {
+        "n": 7018,
+        "af": 3573,
+        "sensitivity": 0.9311502938706969,
+        "specificity": 0.965166908563135,
+        "balanced_accuracy": 0.948158601216916,
+        "precision": 0.9651871192341166,
+        "average_precision": 0.9750802845728331
+      },
+      "08215": {
+        "n": 5507,
+        "af": 4244,
+        "sensitivity": 0.9952874646559849,
+        "specificity": 0.0023752969121140144,
+        "balanced_accuracy": 0.4988313807840495,
+        "precision": 0.7702407002188184,
+        "average_precision": 0.9530013883558908
+      },
+      "04746": {
+        "n": 6075,
+        "af": 3825,
+        "sensitivity": 0.8831372549019608,
+        "specificity": 0.9951111111111111,
+        "balanced_accuracy": 0.939124183006536,
+        "precision": 0.9967542047801712,
+        "average_precision": 0.9966809059876595
+      },
+      "05261": {
+        "n": 5714,
+        "af": 90,
+        "sensitivity": 0.8777777777777778,
+        "specificity": 0.9770625889046942,
+        "balanced_accuracy": 0.927420183341236,
+        "precision": 0.3798076923076923,
+        "average_precision": 0.7592373281055087
+      },
+      "07162": {
+        "n": 4726,
+        "af": 4726,
+        "sensitivity": 0.5730004231908591,
+        "specificity": NaN,
+        "balanced_accuracy": 0.5730004231908591,
+        "precision": 1.0,
+        "average_precision": 1.0
+      },
+      "08405": {
+        "n": 7508,
+        "af": 5817,
+        "sensitivity": 0.9939831528279182,
+        "specificity": 0.9982259018332348,
+        "balanced_accuracy": 0.9961045273305764,
+        "precision": 0.9994814174589456,
+        "average_precision": 0.9999494220750295
+      },
+      "08434": {
+        "n": 5064,
+        "af": 279,
+        "sensitivity": 0.985663082437276,
+        "specificity": 0.8438871473354232,
+        "balanced_accuracy": 0.9147751148863497,
+        "precision": 0.2690802348336595,
+        "average_precision": 0.9776054328565302
+      },
+      "04015": {
+        "n": 5512,
+        "af": 53,
+        "sensitivity": 0.03773584905660377,
+        "specificity": 0.9957867741344568,
+        "balanced_accuracy": 0.5167613115955303,
+        "precision": 0.08,
+        "average_precision": 0.1954637043502078
+      },
+      "04043": {
+        "n": 7428,
+        "af": 1598,
+        "sensitivity": 0.6295369211514393,
+        "specificity": 0.9903945111492282,
+        "balanced_accuracy": 0.8099657161503337,
+        "precision": 0.9472693032015066,
+        "average_precision": 0.939173059404858
+      },
+      "05121": {
+        "n": 6027,
+        "af": 4017,
+        "sensitivity": 0.9429922827981081,
+        "specificity": 0.8865671641791045,
+        "balanced_accuracy": 0.9147797234886064,
+        "precision": 0.9432270916334662,
+        "average_precision": 0.9715202385692813
+      },
+      "07879": {
+        "n": 7219,
+        "af": 4991,
+        "sensitivity": 0.8499298737727911,
+        "specificity": 0.9995511669658886,
+        "balanced_accuracy": 0.9247405203693398,
+        "precision": 0.9997643176997407,
+        "average_precision": 0.9997992647812947
+      }
+    }
+  }
+}
