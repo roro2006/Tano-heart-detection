@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tano Heart Device</title>
+<style>
+:root {
+  --bg: #e7e9ee; --bg2: #d5d9e1; --shell: #f6f7f9; --shell-edge: #c9ced8;
+  --screen: #0b1014; --screen-2: #121a20; --line: #22303a;
+  --ink: #e8f0f4; --muted: #7d8d99; --faint: #4c5b66;
+  --ok: #3ddc97; --ok-soft: rgba(61,220,151,.14);
+  --bad: #ff5c6c; --bad-soft: rgba(255,92,108,.15);
+  --amber: #ffb547; --accent: #6cc4ff;
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --bg2: #161b22; --shell: #20262e; --shell-edge: #303844; }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; font: 15px/1.4 system-ui, "Segoe UI", sans-serif; color: #2a313a;
+  background: radial-gradient(1200px 700px at 50% 30%, var(--bg), var(--bg2));
+  display: grid; place-items: center; min-height: 100vh; padding: 24px 16px; }
+@media (prefers-color-scheme: dark) { body { color: #9aa6b2; } }
+
+.wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.device { width: min(380px, 100%); background: linear-gradient(160deg, var(--shell), var(--shell-edge));
+  border-radius: 42px; padding: 22px 20px 26px; position: relative;
+  box-shadow: 0 30px 60px rgba(20,30,50,.28), inset 0 2px 0 rgba(255,255,255,.6), inset 0 -3px 8px rgba(0,0,0,.08); }
+.top { display: flex; align-items: center; justify-content: space-between; padding: 0 10px 14px; }
+.brand { font-weight: 700; letter-spacing: 3px; font-size: 12px; color: #6a7482; }
+.led { width: 10px; height: 10px; border-radius: 50%; background: var(--ok);
+  box-shadow: 0 0 10px var(--ok); transition: background .3s, box-shadow .3s; }
+.led.listen { background: var(--amber); box-shadow: 0 0 12px var(--amber); animation: blink 1s infinite; }
+.led.bad { background: var(--bad); box-shadow: 0 0 12px var(--bad); }
+.led.off { background: #8a929c; box-shadow: none; }
+@keyframes blink { 50% { opacity: .35; } }
+
+.screen { background: radial-gradient(400px 300px at 50% 0%, var(--screen-2), var(--screen));
+  border-radius: 22px; height: 520px; padding: 18px 18px 14px; color: var(--ink); position: relative;
+  overflow: hidden; border: 3px solid #05080a; box-shadow: inset 0 0 30px rgba(0,0,0,.6); display: flex; flex-direction: column; }
+.status { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); letter-spacing: .5px; }
+.status .chip { color: var(--accent); }
+.view { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; animation: fade .35s ease; }
+.view.on { display: flex; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } }
+h1 { font-size: 26px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+.sub { color: var(--muted); font-size: 14px; max-width: 260px; }
+.small { font: 11px var(--mono); color: var(--faint); }
+
+.heart { width: 120px; height: 120px; }
+.heart path { fill: none; stroke: var(--accent); stroke-width: 2.2; }
+#idle .heart { animation: breathe 3.2s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.06); opacity: .8; } }
+
+/* Listening */
+#listen { justify-content: flex-start; padding-top: 14px; gap: 12px; }
+.lhead { width: 100%; display: flex; align-items: baseline; justify-content: space-between; }
+.lhead h2 { margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); animation: blink 1s infinite; }
+.timer { font: 22px var(--mono); color: var(--ink); }
+.timer span { font-size: 12px; color: var(--muted); }
+.pulse { width: 64px; height: 64px; transition: transform .08s; }
+.pulse path { fill: var(--bad); opacity: .9; }
+canvas { width: 100%; height: 120px; display: block; }
+.bar { width: 100%; height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar div { height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+.votes { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 22px; max-width: 290px; }
+.votes i { width: 9px; height: 9px; border-radius: 2px; animation: pop .25s ease; }
+.votes i.n { background: var(--ok); } .votes i.a { background: var(--bad); }
+@keyframes pop { from { transform: scale(0); } }
+.legend { font-size: 11px; color: var(--muted); display: flex; gap: 12px; justify-content: center; }
+.legend b { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+
+/* Analysing */
+.spinner { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Result */
+.badge { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); box-shadow: 0 0 0 8px rgba(61,220,151,.06); }
+.badge.bad { background: var(--bad-soft); color: var(--bad); box-shadow: 0 0 0 8px rgba(255,92,108,.06); }
+.badge svg { width: 54px; height: 54px; }
+#result h1.ok { color: var(--ok); } #result h1.bad { color: var(--bad); }
+.facts { width: 100%; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 10px;
+  display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; font-size: 13px; text-align: left; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; font-family: var(--mono); color: var(--ink); text-align: right; }
+.verify { font: 11px var(--mono); color: var(--muted); }
+.verify.ok { color: var(--ok); }
+.disclaimer { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 10.5px; color: var(--faint); }
+
+.grille { display: flex; justify-content: center; gap: 6px; padding-top: 18px; }
+.grille i { width: 34px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.12); }
+
+.below { text-align: center; font-size: 12px; max-width: 380px; }
+.below code { font-family: var(--mono); }
+.key { margin-top: 6px; font: 12px var(--mono); }
+.key button { font: inherit; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; padding: 0; }
+#sound { position: fixed; inset: 0; background: rgba(10,14,20,.55); display: grid; place-items: center; z-index: 5; backdrop-filter: blur(3px); }
+#sound button { font: 600 16px system-ui; padding: 14px 26px; border-radius: 999px; border: 0; background: #fff; color: #111; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+#sound[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div id="sound"><button id="enable">Tap to turn on the device</button></div>
+<div class="wrap">
+  <div class="device">
+    <div class="top"><span class="brand">TANO HEART</span><span class="led off" id="led"></span></div>
+    <div class="screen">
+      <div class="status"><span id="clock">--:--</span><span class="chip" id="chip">connecting…</span></div>
+
+      <div class="view on" id="idle">
+        <svg class="heart" viewBox="0 0 100 100"><path d="M50 84 C20 62 10 46 10 32 C10 20 20 12 31 12 C40 12 46 18 50 25 C54 18 60 12 69 12 C80 12 90 20 90 32 C90 46 80 62 50 84 Z"/><path d="M18 46 H38 L43 36 L50 58 L56 40 L60 46 H82" stroke-width="2"/></svg>
+        <h1>Ready</h1>
+        <div class="sub">Place the stethoscope chestpiece on the chest, over the mitral area.</div>
+        <div class="small" id="idleNote">waiting for start command</div>
+      </div>
+
+      <div class="view" id="listen">
+        <div class="lhead"><h2><span class="dot"></span>Listening</h2><div class="timer" id="timer">0<span> s</span></div></div>
+        <svg class="pulse" id="pulse" viewBox="0 0 100 100"><path d="M50 84 C20 62 10 46 10 32 C10 20 20 12 31 12 C40 12 46 18 50 25 C54 18 60 12 69 12 C80 12 90 20 90 32 C90 46 80 62 50 84 Z"/></svg>
+        <canvas id="wave"></canvas>
+        <div class="bar"><div id="progress"></div></div>
+        <div class="small">each 2-second window is analysed on the chip</div>
+        <div class="votes" id="votes"></div>
+        <div class="legend"><span><b style="background:var(--ok)"></b>sounds normal</span><span><b style="background:var(--bad)"></b>sounds abnormal</span></div>
+        <div class="sub" style="font-size:12.5px">Keep still and quiet</div>
+      </div>
+
+      <div class="view" id="analyse">
+        <div class="spinner"></div>
+        <h1 style="font-size:20px">Analysing</h1>
+        <div class="sub">Combining every window</div>
+      </div>
+
+      <div class="view" id="result">
+        <div class="badge" id="badge"></div>
+        <h1 id="verdict"></h1>
+        <div class="sub" id="advice"></div>
+        <dl class="facts">
+          <dt>Recording</dt><dd id="fDur"></dd>
+          <dt>Windows flagged</dt><dd id="fWin"></dd>
+          <dt>Result strength</dt><dd id="fStrength"></dd>
+        </dl>
+        <div class="verify" id="verify">checking against reference…</div>
+      </div>
+
+      <div class="view" id="error">
+        <h1 style="font-size:20px;color:var(--amber)">Device error</h1>
+        <div class="sub" id="errText"></div>
+      </div>
+
+      <div class="disclaimer">Screening only · not a diagnosis</div>
+    </div>
+    <div class="grille"><i></i><i></i><i></i></div>
+  </div>
+  <div class="below">
+    Simulated device. Start a listen from the backend with <code>python python/device_cmd.py listen</code>.
+    <div class="key" id="key"></div>
+  </div>
+</div>
+<audio id="audio" preload="auto"></audio>
+<script>
+const $ = id => document.getElementById(id);
+const audio = $("audio");
+let soundOn = false, run = null, showKey = false;
+const ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON_BAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v8"/><circle cx="12" cy="18" r="1.2" fill="currentColor"/></svg>';
+
+$("enable").addEventListener("click", () => {
+  soundOn = true; $("sound").hidden = true;
+  // Unlock audio playback inside this click.
+  audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+  audio.play().catch(() => {});
+});
+setInterval(() => { const d = new Date(); $("clock").textContent = d.toTimeString().slice(0, 5); }, 1000);
+
+function show(id) { document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === id)); }
+function led(cls) { $("led").className = "led " + cls; }
+
+// Device events from the backend.
+function connect() {
+  const es = new EventSource("/api/device/stream");
+  es.addEventListener("hello", e => {
+    const b = JSON.parse(e.data).board;
+    $("chip").textContent = b.version ? `chip v${b.version}` : "PC reference";
+    if (!run) led("");
+  });
+  es.addEventListener("start", e => {
+    const s = JSON.parse(e.data);
+    run = { name: s.name, label: s.label, meta: null, sent: 0, votes: 0, flagged: 0, result: null, startedAt: 0 };
+    $("votes").innerHTML = ""; $("progress").style.width = "0"; $("timer").innerHTML = "0<span> s</span>";
+    $("key").textContent = "";
+    show("listen"); led("listen");
+    if (soundOn && s.realtime) { audio.src = `/api/wav?name=${encodeURIComponent(s.name)}`; audio.load(); }
+  });
+  es.addEventListener("meta", e => {
+    if (!run) return;
+    run.meta = JSON.parse(e.data);
+    run.startedAt = performance.now();
+    if (soundOn && run.meta.realtime) { audio.currentTime = 0; audio.play().catch(() => {}); }
+    requestAnimationFrame(animate);
+  });
+  es.addEventListener("progress", e => { if (run) run.sent = JSON.parse(e.data).sent; });
+  es.addEventListener("window", e => {
+    if (!run) return;
+    const w = JSON.parse(e.data);
+    const abnormal = (w.margin ?? 0) > 0;
+    run.votes++; if (abnormal) run.flagged++;
+    const i = document.createElement("i"); i.className = abnormal ? "a" : "n"; $("votes").appendChild(i);
+  });
+  es.addEventListener("result", e => {
+    if (!run) return;
+    run.result = JSON.parse(e.data);
+    const wait = run.meta && run.meta.realtime ? 300 : 0;
+    setTimeout(() => { show("analyse"); led("listen"); setTimeout(() => reveal(), 1400); }, wait);
+  });
+  es.addEventListener("reference", e => {
+    if (!run) return;
+    run.reference = JSON.parse(e.data);
+    if (run.revealed) verify();
+  });
+  es.addEventListener("error", e => {
+    if (e.data) { $("errText").textContent = JSON.parse(e.data).message; show("error"); led("bad"); run = null; }
+  });
+  es.onerror = () => { $("chip").textContent = "reconnecting…"; led("off"); };
+}
+connect();
+
+function reveal() {
+  const r = run.result; run.revealed = true;
+  audio.pause();
+  const bad = r.abnormal;
+  $("badge").className = "badge " + (bad ? "bad" : "ok");
+  $("badge").innerHTML = bad ? ICON_BAD : ICON_OK;
+  $("verdict").textContent = bad ? "Abnormal heart sound" : "Normal heart sounds";
+  $("verdict").className = bad ? "bad" : "ok";
+  $("advice").textContent = bad
+    ? "Possible murmur or valve problem. Refer for an echocardiogram."
+    : "No abnormal sounds detected. No referral needed from this screen.";
+  $("fDur").textContent = `${r.audio_seconds.toFixed(1)} s`;
+  $("fWin").textContent = `${run.flagged} of ${r.windows}`;
+  // Mean margin per window: small means the windows disagreed.
+  const perWindow = Math.abs(r.margin) / Math.max(1, r.windows);
+  $("fStrength").textContent = perWindow < 100 ? "borderline, re-record" : perWindow < 300 ? "moderate" : "clear";
+  led(bad ? "bad" : "");
+  show("result");
+  if (run.reference) verify();
+  renderKey();
+}
+function verify() {
+  const ok = run.reference.identical;
+  $("verify").textContent = ok ? "on-chip result verified against reference model" : "warning: chip and reference disagree";
+  $("verify").className = "verify" + (ok ? " ok" : "");
+}
+function renderKey() {
+  if (!run) return;
+  $("key").innerHTML = showKey
+    ? `${run.name} · dataset label: ${run.label ? "abnormal" : "normal"} · <button id="hideKey">hide</button>`
+    : `<button id="showKey">show dataset label</button>`;
+  const b = $("showKey") || $("hideKey");
+  b.addEventListener("click", () => { showKey = !showKey; renderKey(); });
+}
+
+// Waveform: the last 3 s around the playhead, drawn from the recording's envelope.
+function animate() {
+  if (!run || !run.meta || run.revealed) return;
+  const m = run.meta, rate = m.rate, total = m.samples / rate;
+  const t = soundOn && m.realtime && !audio.paused ? audio.currentTime : run.sent / rate;
+  $("timer").innerHTML = `${Math.floor(t)}<span> / ${Math.round(total)} s</span>`;
+  $("progress").style.width = `${Math.min(100, t / total * 100)}%`;
+  const cv = $("wave"), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const perSec = rate / m.envelope_step, span = 3 * perSec;
+  const end = Math.floor(t * perSec), start = end - span;
+  if (!m.peak) m.peak = Math.max(1, ...m.envelope.map(([lo, hi]) => Math.max(-lo, hi)));
+  g.strokeStyle = "rgba(108,196,255,.15)"; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+  g.fillStyle = "#6cc4ff";
+  let level = 0;
+  for (let i = Math.max(0, start); i < Math.min(end, m.envelope.length); i++) {
+    const [lo, hi] = m.envelope[i], x = (i - start) / span * w;
+    const y1 = h / 2 - hi / m.peak * h * .46, y2 = h / 2 - lo / m.peak * h * .46;
+    g.fillRect(x, y1, Math.max(1, w / span), Math.max(1, y2 - y1));
+    if (i > end - 6) level = Math.max(level, (hi - lo) / (2 * m.peak));
+  }
+  $("pulse").style.transform = `scale(${1 + Math.min(.35, level * .8)})`;
+  requestAnimationFrame(animate);
+}
+</script>
+</body>
+</html>

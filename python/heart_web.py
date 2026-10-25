@@ -15,6 +15,12 @@ Live mode takes the browser's microphone instead: the page resamples it to
 and each session is saved to data/live/ as a 2 kHz WAV. The model was trained
 on stethoscope recordings, so use a stethoscope microphone; a laptop
 microphone is a new recording condition and its verdicts mean little.
+
+Device mode (http://127.0.0.1:8770/device) is the patient-facing screen of a
+simulated handheld: it waits until a listen command arrives on the backend
+(python python/device_cmd.py listen, or POST /api/device/listen), then plays
+a PhysioNet recording as if heard through the stethoscope while the board
+screens it, and shows the verdict.
 """
 from __future__ import annotations
 
@@ -22,6 +28,8 @@ import argparse
 import array
 import io
 import json
+import queue
+import random
 import sys
 import threading
 import time
@@ -39,6 +47,7 @@ from host import AUDIO_CHUNK, TpuLink
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = Path(__file__).with_name("heart_web.html")
+DEVICE_PAGE = Path(__file__).with_name("heart_device.html")
 RATE = 2000
 ENVELOPE = 20          # samples per waveform point sent to the page (100 points/s)
 LIVE_DIR = ROOT / "data" / "live"   # every microphone session is saved here as a 2 kHz WAV
@@ -89,6 +98,30 @@ class OracleLink:
         return len(windows), sum(margins), last
 
 
+class Broadcast:
+    """Fan-out of device events to every open device screen (one queue per SSE client)."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.queues: list[queue.Queue] = []
+
+    def subscribe(self) -> queue.Queue:
+        q: queue.Queue = queue.Queue()
+        with self.lock:
+            self.queues.append(q)
+        return q
+
+    def unsubscribe(self, q: queue.Queue) -> None:
+        with self.lock:
+            if q in self.queues:
+                self.queues.remove(q)
+
+    def send(self, event: str, body) -> None:
+        with self.lock:
+            for q in self.queues:
+                q.put((event, body))
+
+
 class Screen:
     def __init__(self, link, model: tpu_model.TpuModel, port: str):
         self.link, self.model, self.port = link, model, port
@@ -98,6 +131,35 @@ class Screen:
         magic, version, _ = link.info()
         self.board = {"port": port, "magic": magic.decode(errors="replace").strip(), "version": version}
         self.live: dict | None = None      # the microphone session that holds the lock
+        self.bus = Broadcast()
+        self.device_busy = threading.Event()
+
+    def device_listen(self, name: str | None, label: str | None, realtime: bool) -> dict:
+        """Start a simulated stethoscope listen on every open device screen."""
+        if name is None:
+            wanted = {"abnormal": 1, "normal": 0}.get(label or "")
+            pool = [r.name for r in self.items.values() if self.split[r.name] == "test"
+                    and (wanted is None or r.label == wanted)]
+            name = random.choice(pool)
+        if name not in self.items:
+            raise ValueError(f"unknown recording {name!r}")
+        if self.device_busy.is_set():
+            raise RuntimeError("the device is already listening")
+        self.device_busy.set()
+        record = self.items[name]
+
+        def work():
+            try:
+                self.bus.send("start", {"name": name, "database": record.database, "label": record.label,
+                                        "realtime": realtime, "board": self.board})
+                self.run(name, realtime, self.bus.send)
+            except Exception as exc:
+                self.bus.send("error", {"message": f"{type(exc).__name__}: {exc}"})
+            finally:
+                self.device_busy.clear()
+                self.bus.send("end", {"name": name})
+        threading.Thread(target=work, daemon=True).start()
+        return {"name": name, "database": record.database, "label": record.label}
 
     def _acquire(self) -> bool:
         """Take the board, from a microphone session that went quiet if need be."""
@@ -243,8 +305,8 @@ def handler_for(screen: Screen):
         def do_GET(self):
             url = urlparse(self.path)
             query = {k: v[0] for k, v in parse_qs(url.query).items()}
-            if url.path == "/":
-                data = PAGE.read_bytes()
+            if url.path in ("/", "/device"):
+                data = (DEVICE_PAGE if url.path == "/device" else PAGE).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(data)))
@@ -252,6 +314,26 @@ def handler_for(screen: Screen):
                 self.wfile.write(data)
             elif url.path == "/api/board":
                 self._json(screen.board)
+            elif url.path == "/api/device/stream":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                q = screen.bus.subscribe()
+                try:
+                    self.wfile.write(f"event: hello\ndata: {json.dumps({'board': screen.board, 'busy': screen.device_busy.is_set()})}\n\n".encode())
+                    self.wfile.flush()
+                    while True:
+                        try:
+                            event, body = q.get(timeout=15)
+                            self.wfile.write(f"event: {event}\ndata: {json.dumps(body)}\n\n".encode())
+                        except queue.Empty:
+                            self.wfile.write(b": keep-alive\n\n")
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                    pass
+                finally:
+                    screen.bus.unsubscribe(q)
             elif url.path == "/api/recordings":
                 self._json(screen.catalog())
             elif url.path == "/api/wav" and query.get("name") in screen.items:
@@ -288,7 +370,10 @@ def handler_for(screen: Screen):
             query = {k: v[0] for k, v in parse_qs(url.query).items()}
             body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
             try:
-                if url.path == "/api/live/start":
+                if url.path == "/api/device/listen":
+                    self._json(screen.device_listen(query.get("name"), query.get("label"),
+                                                    query.get("pace", "realtime") == "realtime"))
+                elif url.path == "/api/live/start":
                     self._json(screen.live_start())
                 elif url.path == "/api/live/chunk":
                     if len(body) % 2 or len(body) > 2 * AUDIO_CHUNK:
